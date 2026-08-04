@@ -4,6 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const authRoutes = require('./routes/authRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
+const startEscalationJob = require('./utils/escalationJob');
 
 const app = express();
 app.use(cors());
@@ -17,7 +18,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB connected'))
+    .then(() => {
+        console.log('MongoDB connected');
+        startEscalationJob();
+    })
     .catch((err) => console.error('MongoDB connection error:', err));
 
 const PORT = process.env.PORT || 5000;
