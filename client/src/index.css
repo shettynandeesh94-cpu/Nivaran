@@ -1247,6 +1247,50 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+/* --- ADMIN DELAY CLARIFICATION STYLES --- */
+.admin-delay-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.05));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 15px;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+}
+
+.admin-delay-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.admin-delay-date {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.admin-delay-message {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin: 8px 0;
+}
+
+.admin-delay-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--secondary);
+    background: rgba(99, 102, 241, 0.15);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
 /* --- PHOTO PROOF ATTACHMENT & IMAGE UPLOAD STYLES --- */
 .image-upload-wrapper {
     width: 100%;
