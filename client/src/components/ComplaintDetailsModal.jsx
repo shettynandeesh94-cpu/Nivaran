@@ -10,6 +10,13 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
     const [countdownText, setCountdownText] = useState('Calculating...');
     const [isBreached, setIsBreached] = useState(false);
 
+    // Expense form states
+    const [expenseItem, setExpenseItem] = useState('');
+    const [expenseCost, setExpenseCost] = useState('');
+    const [expenseNote, setExpenseNote] = useState('');
+    const [addingExpense, setAddingExpense] = useState(false);
+    const [budgetWarning, setBudgetWarning] = useState('');
+
     // Fetch Details on Open/ID change
     useEffect(() => {
         if (!isOpen || !complaintId) return;
@@ -76,6 +83,34 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         }
     };
 
+    const handleAddExpense = async (e) => {
+        e.preventDefault();
+        if (!expenseItem || !expenseCost || Number(expenseCost) <= 0) {
+            showToast('Please provide a valid item name and positive cost amount.', 'error');
+            return;
+        }
+
+        setAddingExpense(true);
+        try {
+            const res = await api.addComplaintExpense(complaintId, expenseItem, Number(expenseCost), expenseNote);
+            showToast(res.message || 'Expense added successfully!', 'success');
+            setComplaint(res.complaint);
+            if (res.warning) {
+                setBudgetWarning(res.warning);
+            } else {
+                setBudgetWarning('');
+            }
+            setExpenseItem('');
+            setExpenseCost('');
+            setExpenseNote('');
+            refreshDashboard();
+        } catch (err) {
+            showToast(err.message || 'Failed to add expense', 'error');
+        } finally {
+            setAddingExpense(false);
+        }
+    };
+
     const getPriorityClass = (priority) => {
         if (priority === 'HIGH') return 'badge-high';
         if (priority === 'MEDIUM') return 'badge-medium';
@@ -108,7 +143,7 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                             </div>
                             <h3>{complaint.title}</h3>
                             <p className="text-muted">
-                                <i className="fa-solid fa-location-dot"></i> {complaint.ward} | Category: {complaint.category || 'General'}
+                                <i className="fa-solid fa-location-dot"></i> {complaint.ward} | Category: {complaint.category || 'General'} | Department: {complaint.department?.name || 'Unassigned'}
                             </p>
                         </div>
                         
@@ -118,6 +153,95 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                 <div className="detail-section">
                                     <h4>Description</h4>
                                     <p className="detail-description-text">{complaint.description}</p>
+                                </div>
+
+                                {/* Resolution Expense & Cost Breakdown */}
+                                <div className="detail-section">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <h4>Resolution Expenditure & Cost Breakdown</h4>
+                                        <span className="expense-total-pill">
+                                            Total Spent: ₹{(complaint.resolutionCost || 0).toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                    <p className="detail-card-desc">
+                                        Public financial transparency breakdown logged by the assigned department for resolving this issue.
+                                    </p>
+
+                                    {budgetWarning && (
+                                        <div className="budget-alert-box">
+                                            <i className="fa-solid fa-triangle-exclamation"></i>
+                                            <div>{budgetWarning}</div>
+                                        </div>
+                                    )}
+
+                                    {complaint.resolutionExpenses && complaint.resolutionExpenses.length > 0 ? (
+                                        <table className="expense-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item / Service</th>
+                                                    <th>Cost (₹)</th>
+                                                    <th>Note</th>
+                                                    <th>Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {complaint.resolutionExpenses.map((exp, idx) => (
+                                                    <tr key={idx}>
+                                                        <td><strong>{exp.item}</strong></td>
+                                                        <td>₹{exp.cost.toLocaleString('en-IN')}</td>
+                                                        <td>{exp.note || '-'}</td>
+                                                        <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                            {new Date(exp.addedAt).toLocaleDateString()}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="empty-expenses-box">
+                                            <i className="fa-solid fa-receipt"></i>
+                                            <p>No resolution expenses recorded yet for this complaint.</p>
+                                        </div>
+                                    )}
+
+                                    {/* Add Expense Form for Corporator / Admin */}
+                                    {user && (user.role === 'corporator' || user.role === 'admin') && (
+                                        <div className="add-expense-card" style={{ marginTop: '15px' }}>
+                                            <h5><i className="fa-solid fa-plus-circle"></i> Record Resolution Expense</h5>
+                                            <form onSubmit={handleAddExpense} className="expense-form-grid">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Item (e.g., Pipe replacement)"
+                                                    value={expenseItem}
+                                                    onChange={(e) => setExpenseItem(e.target.value)}
+                                                    required
+                                                />
+                                                <input 
+                                                    type="number"
+                                                    placeholder="Cost (₹)"
+                                                    value={expenseCost}
+                                                    onChange={(e) => setExpenseCost(e.target.value)}
+                                                    required
+                                                    min="1"
+                                                />
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Notes / Vendor details (optional)"
+                                                    value={expenseNote}
+                                                    onChange={(e) => setExpenseNote(e.target.value)}
+                                                    style={{ gridColumn: 'span 2' }}
+                                                />
+                                                <button 
+                                                    type="submit" 
+                                                    className="btn btn-secondary btn-block" 
+                                                    style={{ gridColumn: 'span 2' }}
+                                                    disabled={addingExpense}
+                                                >
+                                                    {addingExpense ? 'Saving...' : 'Add Expense Line'}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 {/* SLA Timeline */}
@@ -156,6 +280,12 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                         <span className="detail-meta-label">Submitted By:</span>
                                         <span className="detail-meta-val">
                                             {complaint.createdBy?.name || 'Citizen'}
+                                        </span>
+                                    </div>
+                                    <div className="detail-meta-item">
+                                        <span className="detail-meta-label">Department:</span>
+                                        <span className="detail-meta-val">
+                                            {complaint.department?.name || 'Unassigned'}
                                         </span>
                                     </div>
                                     <div className="detail-meta-item">

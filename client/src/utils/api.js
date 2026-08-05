@@ -100,6 +100,46 @@ export const api = {
         });
     },
 
+    addComplaintExpense: async (id, item, cost, note) => {
+        return await request(`/complaints/${id}/expenses`, {
+            method: 'POST',
+            body: JSON.stringify({ item, cost, note }),
+        });
+    },
+
+    getDepartmentBudgets: async () => {
+        return await request('/budget/departments', {
+            method: 'GET',
+        });
+    },
+
+    getBudgetRequests: async () => {
+        return await request('/budget/requests', {
+            method: 'GET',
+        });
+    },
+
+    createBudgetRequest: async (departmentId, amount, reason, complaintId) => {
+        return await request('/budget/requests', {
+            method: 'POST',
+            body: JSON.stringify({ departmentId, amount, reason, complaintId }),
+        });
+    },
+
+    actionBudgetRequest: async (requestId, status, adminNote) => {
+        return await request(`/budget/requests/${requestId}/action`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, adminNote }),
+        });
+    },
+
+    updateDepartmentBudget: async (departmentId, budget) => {
+        return await request(`/budget/departments/${departmentId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ budget }),
+        });
+    },
+
     getToken,
     getUser,
 };
