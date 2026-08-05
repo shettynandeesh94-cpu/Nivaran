@@ -185,3 +185,88 @@ exports.addResolutionExpense = async (req, res) => {
         res.status(500).json({ message: 'Server error adding resolution expense', error: err.message });
     }
 };
+
+// Corporator / Department asks for time extension on an escalated complaint
+exports.requestExtension = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { daysRequested, reason } = req.body;
+
+        if (!daysRequested || Number(daysRequested) <= 0 || !reason) {
+            return res.status(400).json({ message: 'Valid days requested and justification reason are required' });
+        }
+
+        const complaint = await Complaint.findById(id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        complaint.extensionRequest = {
+            requestedBy: req.user.id,
+            daysRequested: Number(daysRequested),
+            reason,
+            status: 'PENDING',
+            requestedAt: new Date()
+        };
+
+        await complaint.save();
+        const populated = await Complaint.findById(id)
+            .populate('department')
+            .populate('createdBy', 'name email role')
+            .populate('extensionRequest.requestedBy', 'name email role');
+
+        res.json({ message: 'SLA extension request submitted to Admin for review', complaint: populated });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error requesting SLA extension', error: err.message });
+    }
+};
+
+// Admin sends delay clarification note to citizen and optionally grants SLA extension
+exports.sendAdminClarification = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { message, extendedDays, approveExtension } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ message: 'Clarification message to citizen is required' });
+        }
+
+        const complaint = await Complaint.findById(id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        const daysToAdd = Number(extendedDays) || (complaint.extensionRequest ? complaint.extensionRequest.daysRequested : 0) || 0;
+
+        complaint.adminDelayNote = {
+            message,
+            extendedDays: daysToAdd,
+            sentBy: req.user.id,
+            sentAt: new Date()
+        };
+
+        if (approveExtension && daysToAdd > 0) {
+            // Update deadline
+            const currentDeadline = complaint.deadline ? new Date(complaint.deadline) : new Date();
+            const baseDate = currentDeadline > new Date() ? currentDeadline : new Date();
+            baseDate.setDate(baseDate.getDate() + daysToAdd);
+            complaint.deadline = baseDate;
+
+            // Reset status back to IN_PROGRESS from ESCALATED
+            complaint.status = 'IN_PROGRESS';
+
+            if (complaint.extensionRequest) {
+                complaint.extensionRequest.status = 'APPROVED';
+            }
+        } else if (complaint.extensionRequest && complaint.extensionRequest.status === 'PENDING') {
+            complaint.extensionRequest.status = 'REJECTED';
+        }
+
+        await complaint.save();
+
+        const populated = await Complaint.findById(id)
+            .populate('department')
+            .populate('createdBy', 'name email role')
+            .populate('adminDelayNote.sentBy', 'name email role');
+
+        res.json({ message: 'Clarification note sent to citizen and complaint updated', complaint: populated });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error sending admin clarification', error: err.message });
+    }
+};

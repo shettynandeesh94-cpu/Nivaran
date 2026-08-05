@@ -6,6 +6,8 @@ const {
     getComplaintById,
     updateComplaintStatus,
     addResolutionExpense,
+    requestExtension,
+    sendAdminClarification,
 } = require('../controllers/complaintController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
@@ -14,5 +16,7 @@ router.get('/', protect, getComplaints);
 router.get('/:id', protect, getComplaintById);
 router.patch('/:id/status', protect, restrictTo('corporator', 'admin'), updateComplaintStatus);
 router.post('/:id/expenses', protect, restrictTo('corporator', 'admin'), addResolutionExpense);
+router.post('/:id/extension-request', protect, restrictTo('corporator', 'admin'), requestExtension);
+router.post('/:id/admin-clarification', protect, restrictTo('admin'), sendAdminClarification);
 
 module.exports = router;

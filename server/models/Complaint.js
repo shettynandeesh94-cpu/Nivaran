@@ -20,6 +20,19 @@ const complaintSchema = new mongoose.Schema({
         addedAt: { type: Date, default: Date.now }
     }],
     budgetRequestRef: { type: mongoose.Schema.Types.ObjectId, ref: 'BudgetRequest' },
+    extensionRequest: {
+        requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        reason: { type: String },
+        daysRequested: { type: Number, default: 0 },
+        status: { type: String, enum: ['NONE', 'PENDING', 'APPROVED', 'REJECTED'], default: 'NONE' },
+        requestedAt: { type: Date }
+    },
+    adminDelayNote: {
+        message: { type: String },
+        extendedDays: { type: Number, default: 0 },
+        sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        sentAt: { type: Date }
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Complaint', complaintSchema);
