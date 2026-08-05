@@ -155,6 +155,30 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                     <p className="detail-description-text">{complaint.description}</p>
                                 </div>
 
+                                {/* Photo Proof Attachment Evidence */}
+                                <div className="detail-section">
+                                    <h4><i className="fa-solid fa-camera" style={{ color: 'var(--secondary)', marginRight: '6px' }}></i> Issue Photo Evidence</h4>
+                                    {complaint.attachment ? (
+                                        <div className="photo-proof-card">
+                                            <img 
+                                                src={complaint.attachment} 
+                                                alt="Citizen issue proof" 
+                                                className="photo-proof-img"
+                                                onClick={() => window.open(complaint.attachment, '_blank')}
+                                                title="Click to open full resolution image in new tab"
+                                            />
+                                            <div className="photo-proof-caption">
+                                                <i className="fa-solid fa-shield-halved" style={{ color: 'var(--status-resolved)' }}></i> Photo proof uploaded by citizen upon grievance submission.
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="empty-expenses-box">
+                                            <i className="fa-solid fa-image" style={{ opacity: 0.4 }}></i>
+                                            <p>No photo proof was attached for this complaint.</p>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Resolution Expense & Cost Breakdown */}
                                 <div className="detail-section">
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
