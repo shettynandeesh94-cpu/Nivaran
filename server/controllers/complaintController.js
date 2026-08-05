@@ -24,7 +24,7 @@ const findDepartmentForCategory = async (category) => {
 // Create a new complaint (with smart engine: auto-category, auto-priority, auto-department)
 exports.createComplaint = async (req, res) => {
     try {
-        const { title, description, ward } = req.body;
+        const { title, description, ward, attachment } = req.body;
 
         const category = detectCategory(description);
         const priority = detectPriority(description);
@@ -58,6 +58,7 @@ exports.createComplaint = async (req, res) => {
             category,
             priority,
             deadline,
+            attachment: attachment || null,
             department: departmentId,
             createdBy: req.user.id,
         });
