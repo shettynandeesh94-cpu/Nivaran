@@ -54,6 +54,15 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [filteredComplaints, setFilteredComplaints] = useState([]);
     const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0, escalated: 0 });
 
+    // Budget states
+    const [departments, setDepartments] = useState([]);
+    const [budgetRequests, setBudgetRequests] = useState([]);
+    const [reqDeptId, setReqDeptId] = useState('');
+    const [reqAmount, setReqAmount] = useState('');
+    const [reqReason, setReqReason] = useState('');
+    const [submittingReq, setSubmittingReq] = useState(false);
+    const [adminNotesMap, setAdminNotesMap] = useState({});
+
     // File complaint states
     const [title, setTitle] = useState('');
     const [ward, setWard] = useState('');
@@ -90,6 +99,25 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
         loadComplaints();
     }, [refreshKey, showToast]);
 
+    // Fetch Departments and Budget Requests when budget tab is active or on refresh
+    const loadBudgetData = async () => {
+        try {
+            const depts = await api.getDepartmentBudgets();
+            setDepartments(depts);
+
+            const reqs = await api.getBudgetRequests();
+            setBudgetRequests(reqs);
+        } catch (err) {
+            console.error('Error fetching budget data:', err);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'tab-budget' || activeTab === 'tab-overview') {
+            loadBudgetData();
+        }
+    }, [activeTab, refreshKey]);
+
     // Live Smart Engine Trigger inside textbox change
     const handleDescriptionChange = (val) => {
         setDescription(val);
@@ -106,7 +134,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
         }
     }, [activeTab, user]);
 
-    // Handle Form Submit
+    // Handle Form Submit (New Complaint)
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         
@@ -131,6 +159,41 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             triggerRefresh();
         } catch (err) {
             showToast(err.message || 'Error submitting complaint', 'error');
+        }
+    };
+
+    // Handle Budget Request Submit (Corporator / Department)
+    const handleBudgetRequestSubmit = async (e) => {
+        e.preventDefault();
+        if (!reqDeptId || !reqAmount || Number(reqAmount) <= 0 || !reqReason.trim()) {
+            showToast('Please select department, valid amount, and detailed reason.', 'error');
+            return;
+        }
+
+        setSubmittingReq(true);
+        try {
+            const res = await api.createBudgetRequest(reqDeptId, Number(reqAmount), reqReason.trim());
+            showToast(res.message || 'Budget request submitted to Admin!', 'success');
+            setReqAmount('');
+            setReqReason('');
+            setReqDeptId('');
+            loadBudgetData();
+        } catch (err) {
+            showToast(err.message || 'Failed to submit budget request', 'error');
+        } finally {
+            setSubmittingReq(false);
+        }
+    };
+
+    // Handle Budget Request Action (Admin)
+    const handleActionBudgetRequest = async (requestId, status) => {
+        try {
+            const note = adminNotesMap[requestId] || '';
+            const res = await api.actionBudgetRequest(requestId, status, note);
+            showToast(res.message || `Budget request ${status.toLowerCase()} successfully!`, 'success');
+            loadBudgetData();
+        } catch (err) {
+            showToast(err.message || 'Error processing budget request', 'error');
         }
     };
 
@@ -205,6 +268,13 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                             onClick={() => switchTab('tab-all-complaints')}
                         >
                             <i className="fa-solid fa-list-check"></i> Complaints Board
+                        </button>
+
+                        <button 
+                            className={`nav-tab-btn ${activeTab === 'tab-budget' ? 'active' : ''}`}
+                            onClick={() => switchTab('tab-budget')}
+                        >
+                            <i className="fa-solid fa-coins"></i> Department & Budgets
                         </button>
                     </nav>
                 </aside>
@@ -403,7 +473,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                     </div>
 
                                     <div className="smart-disclaimer">
-                                        <i class="fa-solid fa-circle-info"></i>
+                                        <i className="fa-solid fa-circle-info"></i>
                                         <span>If a similar issue is already open in your ward, our engine will automatically merge the files to avoid congestion and escalate priority.</span>
                                     </div>
                                 </div>
@@ -512,6 +582,199 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                                 <i className="fa-solid fa-eye"></i> View
                                                             </button>
                                                         </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* View: Department & Budgets */}
+                    {activeTab === 'tab-budget' && (
+                        <div id="tab-budget">
+                            <div className="dashboard-header-row">
+                                <div>
+                                    <h2 className="dashboard-title">Department Budgets & Resolution Finances</h2>
+                                    <p className="dashboard-subtitle">Track resolution expenditures, department balances, and request budget top-ups from Admin.</p>
+                                </div>
+                                <button className="btn btn-secondary" onClick={loadBudgetData}>
+                                    <i className="fa-solid fa-rotate"></i> Refresh Budgets
+                                </button>
+                            </div>
+
+                            {/* Department Budget Cards */}
+                            <div className="dept-budget-grid">
+                                {departments.map(dept => {
+                                    const remaining = dept.budget - (dept.spentBudget || 0);
+                                    const pct = Math.min(100, Math.round(((dept.spentBudget || 0) / (dept.budget || 1)) * 100));
+                                    const isLow = remaining < 20000;
+
+                                    return (
+                                        <div className={`dept-card ${isLow ? 'low-budget' : ''}`} key={dept._id}>
+                                            <div className="dept-card-header">
+                                                <h4><i className="fa-solid fa-building-columns"></i> {dept.name}</h4>
+                                                <span className={`budget-status-pill ${isLow ? 'danger' : 'success'}`}>
+                                                    {isLow ? 'Low Funds' : 'Active'}
+                                                </span>
+                                            </div>
+                                            <p className="dept-officer"><i className="fa-solid fa-user-shield"></i> Officer: {dept.officerName || 'Dept Officer'}</p>
+
+                                            <div className="dept-metrics-row">
+                                                <div>
+                                                    <span className="metric-lbl">Total Allocated</span>
+                                                    <span className="metric-val">₹{dept.budget.toLocaleString('en-IN')}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="metric-lbl">Spent on Issues</span>
+                                                    <span className="metric-val spent">₹{(dept.spentBudget || 0).toLocaleString('en-IN')}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="metric-lbl">Remaining</span>
+                                                    <span className={`metric-val ${remaining < 0 ? 'negative' : 'positive'}`}>
+                                                        ₹{remaining.toLocaleString('en-IN')}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Progress Bar */}
+                                            <div className="budget-progress-container">
+                                                <div className="budget-progress-bar" style={{ width: `${pct}%`, background: pct > 85 ? 'var(--status-escalated)' : 'var(--secondary)' }}></div>
+                                            </div>
+                                            <div className="progress-lbl">{pct}% Utilized</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Corporator / Department Action: Submit Budget Request */}
+                            {user && (user.role === 'corporator' || user.role === 'admin') && (
+                                <div className="content-panel" style={{ marginTop: '25px' }}>
+                                    <h3 className="panel-title"><i className="fa-solid fa-hand-holding-dollar"></i> Request Additional Budget from Admin</h3>
+                                    <p className="dashboard-subtitle">Submit a funding request to the Admin when issue resolution expenses exceed department budget.</p>
+
+                                    <form onSubmit={handleBudgetRequestSubmit} className="budget-request-form">
+                                        <div className="form-group">
+                                            <label>Select Department</label>
+                                            <select 
+                                                value={reqDeptId} 
+                                                onChange={(e) => setReqDeptId(e.target.value)}
+                                                required
+                                            >
+                                                <option value="">-- Choose Department --</option>
+                                                {departments.map(d => (
+                                                    <option key={d._id} value={d._id}>{d.name} (Remaining: ₹{(d.budget - (d.spentBudget || 0)).toLocaleString('en-IN')})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label>Required Amount (₹)</label>
+                                            <input 
+                                                type="number" 
+                                                placeholder="e.g. 50000" 
+                                                value={reqAmount}
+                                                onChange={(e) => setReqAmount(e.target.value)}
+                                                required 
+                                                min="100"
+                                            />
+                                        </div>
+
+                                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                            <label>Reason / Expense Justification</label>
+                                            <textarea 
+                                                rows="3" 
+                                                placeholder="Explain what materials, labor, or equipment require additional funding..." 
+                                                value={reqReason}
+                                                onChange={(e) => setReqReason(e.target.value)}
+                                                required
+                                            ></textarea>
+                                        </div>
+
+                                        <button 
+                                            type="submit" 
+                                            className="btn btn-primary btn-block" 
+                                            style={{ gridColumn: 'span 2' }}
+                                            disabled={submittingReq}
+                                        >
+                                            {submittingReq ? 'Submitting Request...' : 'Submit Funding Request to Admin'}
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
+
+                            {/* Budget Requests Management Table */}
+                            <div className="content-panel" style={{ marginTop: '25px' }}>
+                                <h3 className="panel-title"><i className="fa-solid fa-clock-rotate-left"></i> Budget Requests Log & Approvals</h3>
+                                
+                                <div className="table-container">
+                                    <table className="complaint-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Department</th>
+                                                <th>Requested By</th>
+                                                <th>Amount (₹)</th>
+                                                <th>Reason</th>
+                                                <th>Status</th>
+                                                <th>Submitted Date</th>
+                                                {user?.role === 'admin' && <th>Admin Actions</th>}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {budgetRequests.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={user?.role === 'admin' ? 7 : 6} className="text-center text-muted">No budget requests submitted yet.</td>
+                                                </tr>
+                                            ) : (
+                                                budgetRequests.map(br => (
+                                                    <tr key={br._id}>
+                                                        <td><strong>{br.department?.name || 'Department'}</strong></td>
+                                                        <td>{br.requestedBy?.name || 'Officer'}</td>
+                                                        <td><strong style={{ color: 'var(--secondary)' }}>₹{br.amount.toLocaleString('en-IN')}</strong></td>
+                                                        <td>{br.reason}</td>
+                                                        <td>
+                                                            <span className={`badge ${br.status === 'APPROVED' ? 'badge-status-resolved' : br.status === 'REJECTED' ? 'badge-status-escalated' : 'badge-status-progress'}`}>
+                                                                {br.status}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ fontSize: '0.85rem' }}>{new Date(br.createdAt).toLocaleDateString()}</td>
+
+                                                        {user?.role === 'admin' && (
+                                                            <td>
+                                                                {br.status === 'PENDING' ? (
+                                                                    <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
+                                                                        <input 
+                                                                            type="text"
+                                                                            placeholder="Admin note (optional)"
+                                                                            value={adminNotesMap[br._id] || ''}
+                                                                            onChange={(e) => setAdminNotesMap({ ...adminNotesMap, [br._id]: e.target.value })}
+                                                                            style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                                                                        />
+                                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                                            <button 
+                                                                                className="btn btn-primary btn-sm"
+                                                                                onClick={() => handleActionBudgetRequest(br._id, 'APPROVED')}
+                                                                            >
+                                                                                <i className="fa-solid fa-check"></i> Approve
+                                                                            </button>
+                                                                            <button 
+                                                                                className="btn btn-secondary btn-sm"
+                                                                                onClick={() => handleActionBudgetRequest(br._id, 'REJECTED')}
+                                                                                style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }}
+                                                                            >
+                                                                                <i className="fa-solid fa-xmark"></i> Reject
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                                        Processed ({br.adminNote || 'No notes'})
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))
                                             )}
