@@ -140,6 +140,20 @@ export const api = {
         });
     },
 
+    requestComplaintExtension: async (id, daysRequested, reason) => {
+        return await request(`/complaints/${id}/extension-request`, {
+            method: 'POST',
+            body: JSON.stringify({ daysRequested, reason }),
+        });
+    },
+
+    sendAdminClarification: async (id, message, extendedDays, approveExtension) => {
+        return await request(`/complaints/${id}/admin-clarification`, {
+            method: 'POST',
+            body: JSON.stringify({ message, extendedDays, approveExtension }),
+        });
+    },
+
     getToken,
     getUser,
 };

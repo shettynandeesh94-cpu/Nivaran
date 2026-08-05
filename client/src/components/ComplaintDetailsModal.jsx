@@ -17,6 +17,17 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
     const [addingExpense, setAddingExpense] = useState(false);
     const [budgetWarning, setBudgetWarning] = useState('');
 
+    // Extension Request states (Corporator)
+    const [extDays, setExtDays] = useState('3');
+    const [extReason, setExtReason] = useState('');
+    const [submittingExt, setSubmittingExt] = useState(false);
+
+    // Admin Clarification states (Admin)
+    const [adminMsg, setAdminMsg] = useState('');
+    const [adminAddDays, setAdminAddDays] = useState('3');
+    const [approveExtCheck, setApproveExtCheck] = useState(true);
+    const [sendingClarification, setSendingClarification] = useState(false);
+
     // Fetch Details on Open/ID change
     useEffect(() => {
         if (!isOpen || !complaintId) return;
@@ -27,6 +38,9 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                 const data = await api.getComplaintById(complaintId);
                 setComplaint(data);
                 setStatusValue(data.status);
+                if (data.extensionRequest?.daysRequested) {
+                    setAdminAddDays(data.extensionRequest.daysRequested.toString());
+                }
             } catch (err) {
                 showToast(err.message || 'Error loading details', 'error');
                 onClose();
@@ -111,6 +125,49 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         }
     };
 
+    const handleRequestExtension = async (e) => {
+        e.preventDefault();
+        if (!extDays || Number(extDays) <= 0 || !extReason.trim()) {
+            showToast('Please provide valid days and reason for extension request', 'error');
+            return;
+        }
+
+        setSubmittingExt(true);
+        try {
+            const res = await api.requestComplaintExtension(complaintId, Number(extDays), extReason.trim());
+            showToast(res.message || 'Extension request submitted to Admin', 'success');
+            setComplaint(res.complaint);
+            setExtReason('');
+            refreshDashboard();
+        } catch (err) {
+            showToast(err.message || 'Failed to submit extension request', 'error');
+        } finally {
+            setSubmittingExt(false);
+        }
+    };
+
+    const handleSendAdminClarification = async (e) => {
+        e.preventDefault();
+        if (!adminMsg.trim()) {
+            showToast('Clarification message for citizen is required', 'error');
+            return;
+        }
+
+        setSendingClarification(true);
+        try {
+            const res = await api.sendAdminClarification(complaintId, adminMsg.trim(), Number(adminAddDays), approveExtCheck);
+            showToast(res.message || 'Clarification note sent to citizen!', 'success');
+            setComplaint(res.complaint);
+            setStatusValue(res.complaint.status);
+            setAdminMsg('');
+            refreshDashboard();
+        } catch (err) {
+            showToast(err.message || 'Failed to send admin clarification', 'error');
+        } finally {
+            setSendingClarification(false);
+        }
+    };
+
     const getPriorityClass = (priority) => {
         if (priority === 'HIGH') return 'badge-high';
         if (priority === 'MEDIUM') return 'badge-medium';
@@ -154,6 +211,29 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                     <h4>Description</h4>
                                     <p className="detail-description-text">{complaint.description}</p>
                                 </div>
+
+                                {/* Official Admin Delay & Clarification Update (Visible to Citizen & All) */}
+                                {complaint.adminDelayNote && complaint.adminDelayNote.message && (
+                                    <div className="detail-section">
+                                        <div className="admin-delay-card">
+                                            <div className="admin-delay-header">
+                                                <i className="fa-solid fa-bullhorn" style={{ color: 'var(--secondary)', fontSize: '1.2rem' }}></i>
+                                                <div>
+                                                    <h5 style={{ margin: 0 }}>Official Admin Update & Delay Clarification</h5>
+                                                    <span className="admin-delay-date">
+                                                        Sent by {complaint.adminDelayNote.sentBy?.name || 'Municipal Admin'} on {new Date(complaint.adminDelayNote.sentAt).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="admin-delay-message">{complaint.adminDelayNote.message}</p>
+                                            {complaint.adminDelayNote.extendedDays > 0 && (
+                                                <div className="admin-delay-badge">
+                                                    <i className="fa-solid fa-clock-rotate-left"></i> Revised Resolution Window: +{complaint.adminDelayNote.extendedDays} Days Approved
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Photo Proof Attachment Evidence */}
                                 <div className="detail-section">
@@ -296,7 +376,7 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                 </div>
                             </div>
 
-                            {/* Admin Action Panel / Sidebar */}
+                            {/* Admin & Corporator Control Sidebar */}
                             <div className="details-right">
                                 <div className="detail-sidebar-card">
                                     <h4>Filing Details</h4>
@@ -319,6 +399,103 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                         </span>
                                     </div>
                                 </div>
+
+                                {/* Corporator: Request SLA Time Extension */}
+                                {user && (user.role === 'corporator' || user.role === 'admin') && (
+                                    <div className="detail-sidebar-card">
+                                        <h4><i className="fa-solid fa-hourglass-half"></i> Request SLA Time Extension</h4>
+                                        <p className="detail-card-desc">Request extra days from Admin if ground work requires delay.</p>
+                                        
+                                        {complaint.extensionRequest && complaint.extensionRequest.status === 'PENDING' ? (
+                                            <div className="budget-alert-box" style={{ background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)', color: 'var(--status-progress)' }}>
+                                                <i className="fa-solid fa-clock"></i>
+                                                <div>
+                                                    Extension request of +{complaint.extensionRequest.daysRequested} days is <strong>PENDING</strong> Admin review.
+                                                    <div style={{ fontSize: '0.75rem', marginTop: '2px', opacity: 0.8 }}>
+                                                        Reason: "{complaint.extensionRequest.reason}"
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <form onSubmit={handleRequestExtension}>
+                                                <div className="form-group">
+                                                    <label>Extra Days Requested</label>
+                                                    <input 
+                                                        type="number" 
+                                                        min="1" 
+                                                        max="30" 
+                                                        value={extDays} 
+                                                        onChange={(e) => setExtDays(e.target.value)} 
+                                                        required 
+                                                    />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Justification Reason</label>
+                                                    <textarea 
+                                                        rows="2" 
+                                                        placeholder="Explain why extra time is required..." 
+                                                        value={extReason} 
+                                                        onChange={(e) => setExtReason(e.target.value)} 
+                                                        required 
+                                                        style={{ fontSize: '0.85rem' }}
+                                                    ></textarea>
+                                                </div>
+                                                <button type="submit" className="btn btn-secondary btn-block btn-sm" disabled={submittingExt}>
+                                                    {submittingExt ? 'Submitting...' : 'Request Extension from Admin'}
+                                                </button>
+                                            </form>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Admin Action: Send Clarification Note & Approve SLA Extension */}
+                                {user && user.role === 'admin' && (
+                                    <div className="detail-sidebar-card" style={{ borderColor: 'rgba(99, 102, 241, 0.4)', background: 'linear-gradient(135deg, var(--bg-card), rgba(99, 102, 241, 0.05))' }}>
+                                        <h4><i className="fa-solid fa-paper-plane" style={{ color: 'var(--secondary)' }}></i> Admin Citizen Update</h4>
+                                        <p className="detail-card-desc">Send official delay note to citizen & approve SLA extension.</p>
+                                        
+                                        <form onSubmit={handleSendAdminClarification}>
+                                            <div className="form-group">
+                                                <label>Clarification Message for Citizen</label>
+                                                <textarea 
+                                                    rows="3" 
+                                                    placeholder="Explain the delay to the citizen..." 
+                                                    value={adminMsg} 
+                                                    onChange={(e) => setAdminMsg(e.target.value)} 
+                                                    required 
+                                                    style={{ fontSize: '0.85rem' }}
+                                                ></textarea>
+                                            </div>
+                                            
+                                            <div className="form-group">
+                                                <label>Extend SLA Deadline (Days)</label>
+                                                <input 
+                                                    type="number" 
+                                                    min="0" 
+                                                    max="30" 
+                                                    value={adminAddDays} 
+                                                    onChange={(e) => setAdminAddDays(e.target.value)} 
+                                                />
+                                            </div>
+
+                                            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    id="approve-ext-check" 
+                                                    checked={approveExtCheck} 
+                                                    onChange={(e) => setApproveExtCheck(e.target.checked)} 
+                                                />
+                                                <label htmlFor="approve-ext-check" style={{ marginBottom: 0, cursor: 'pointer', fontSize: '0.82rem' }}>
+                                                    Approve Extension & Reset Status to In Progress
+                                                </label>
+                                            </div>
+
+                                            <button type="submit" className="btn btn-primary btn-block" disabled={sendingClarification}>
+                                                {sendingClarification ? 'Sending Note...' : 'Send Update & Extend SLA'}
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
 
                                 {/* Corporator Status Control */}
                                 {user && (user.role === 'corporator' || user.role === 'admin') && (
