@@ -86,10 +86,10 @@ export const api = {
         });
     },
 
-    createComplaint: async (title, description, ward) => {
+    createComplaint: async (title, description, ward, attachment = null) => {
         return await request('/complaints', {
             method: 'POST',
-            body: JSON.stringify({ title, description, ward }),
+            body: JSON.stringify({ title, description, ward, attachment }),
         });
     },
 

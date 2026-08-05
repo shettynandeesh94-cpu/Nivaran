@@ -67,7 +67,29 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [title, setTitle] = useState('');
     const [ward, setWard] = useState('');
     const [description, setDescription] = useState('');
+    const [attachment, setAttachment] = useState(null);
     const [smartPredict, setSmartPredict] = useState({ category: 'General', priority: 'LOW', slaText: '15 Days (360 hrs)' });
+
+    const handleImageFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select a valid image file (JPG, PNG, WEBP)', 'error');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image file size should be under 5MB', 'error');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setAttachment(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
 
     // Filters states
     const [searchQuery, setSearchQuery] = useState('');
@@ -144,17 +166,18 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
         }
 
         try {
-            const data = await api.createComplaint(title.trim(), description.trim(), ward);
+            const data = await api.createComplaint(title.trim(), description.trim(), ward, attachment);
             
             if (data.message.includes('Similar open complaint already exists')) {
                 showToast(data.message, 'info');
             } else {
-                showToast('Complaint submitted successfully!', 'success');
+                showToast('Complaint submitted successfully with photo proof!', 'success');
             }
 
             // Clean form and route
             setTitle('');
             setDescription('');
+            setAttachment(null);
             switchTab('tab-overview');
             triggerRefresh();
         } catch (err) {
@@ -433,12 +456,45 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                             <label htmlFor="complaint-description">Description & Details</label>
                                             <textarea 
                                                 id="complaint-description" 
-                                                rows="6" 
+                                                rows="5" 
                                                 placeholder="Provide a detailed description. Use keywords like 'burst', 'accident', 'overflow', or 'urgent' to trigger high priority." 
                                                 value={description}
                                                 onChange={(e) => handleDescriptionChange(e.target.value)}
                                                 required
                                             ></textarea>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label htmlFor="complaint-image">
+                                                <i className="fa-solid fa-camera" style={{ color: 'var(--secondary)', marginRight: '6px' }}></i>
+                                                Attach Photo Proof <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>(Recommended for faster resolution)</span>
+                                            </label>
+                                            <div className="image-upload-wrapper">
+                                                <input 
+                                                    type="file" 
+                                                    id="complaint-image" 
+                                                    accept="image/*" 
+                                                    onChange={handleImageFileChange}
+                                                    style={{ display: 'none' }}
+                                                />
+                                                <label htmlFor="complaint-image" className="image-dropzone-btn">
+                                                    <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '1.4rem', color: 'var(--secondary)' }}></i>
+                                                    <span>{attachment ? 'Change Photo Proof' : 'Click to Upload Photo Proof of Issue'}</span>
+                                                </label>
+                                            </div>
+
+                                            {attachment && (
+                                                <div className="image-preview-container">
+                                                    <img src={attachment} alt="Issue Preview" className="image-preview-img" />
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn btn-secondary btn-sm remove-image-btn"
+                                                        onClick={() => setAttachment(null)}
+                                                    >
+                                                        <i className="fa-solid fa-trash"></i> Remove Photo
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <button type="submit" className="btn btn-primary btn-block btn-lg">
