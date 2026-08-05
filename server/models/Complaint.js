@@ -12,6 +12,14 @@ const complaintSchema = new mongoose.Schema({
     department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     deadline: { type: Date },
     attachment: { type: String }, // file path/URL
+    resolutionCost: { type: Number, default: 0 },
+    resolutionExpenses: [{
+        item: { type: String, required: true },
+        cost: { type: Number, required: true },
+        note: { type: String },
+        addedAt: { type: Date, default: Date.now }
+    }],
+    budgetRequestRef: { type: mongoose.Schema.Types.ObjectId, ref: 'BudgetRequest' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Complaint', complaintSchema);

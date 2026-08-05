@@ -1,7 +1,27 @@
 const Complaint = require('../models/Complaint');
+const Department = require('../models/Department');
 const { detectCategory, detectPriority, calculateDeadline } = require('../utils/smartEngine');
 
-// Create a new complaint (with smart engine: auto-category, auto-priority, duplicate detection)
+// Map complaint categories to default department names
+const CATEGORY_DEPT_MAP = {
+    'Water Supply & Sewage': 'Water Supply',
+    'Roads & Potholes': 'Roads & Infrastructure',
+    'Garbage & Sanitation': 'Sanitation & Waste',
+    'Electricity & Streetlights': 'Electricity & Lighting',
+    'Public Health & Hygiene': 'Public Health',
+};
+
+// Helper: Find or assign department ID based on category
+const findDepartmentForCategory = async (category) => {
+    const deptName = CATEGORY_DEPT_MAP[category] || 'Roads & Infrastructure';
+    let dept = await Department.findOne({ name: deptName });
+    if (!dept) {
+        dept = await Department.findOne(); // fallback to any existing department
+    }
+    return dept ? dept._id : null;
+};
+
+// Create a new complaint (with smart engine: auto-category, auto-priority, auto-department)
 exports.createComplaint = async (req, res) => {
     try {
         const { title, description, ward } = req.body;
@@ -9,6 +29,7 @@ exports.createComplaint = async (req, res) => {
         const category = detectCategory(description);
         const priority = detectPriority(description);
         const deadline = calculateDeadline(priority);
+        const departmentId = await findDepartmentForCategory(category);
 
         // Duplicate detection: same category + ward + still open
         const existingDuplicate = await Complaint.findOne({
@@ -37,11 +58,16 @@ exports.createComplaint = async (req, res) => {
             category,
             priority,
             deadline,
+            department: departmentId,
             createdBy: req.user.id,
         });
 
         await newComplaint.save();
-        res.status(201).json({ message: 'Complaint submitted successfully', complaint: newComplaint });
+        const populated = await Complaint.findById(newComplaint._id)
+            .populate('department')
+            .populate('createdBy', 'name email role');
+
+        res.status(201).json({ message: 'Complaint submitted successfully', complaint: populated });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
@@ -52,9 +78,15 @@ exports.getComplaints = async (req, res) => {
     try {
         let complaints;
         if (req.user.role === 'citizen') {
-            complaints = await Complaint.find({ createdBy: req.user.id }).sort({ createdAt: -1 });
+            complaints = await Complaint.find({ createdBy: req.user.id })
+                .populate('department')
+                .populate('createdBy', 'name email role')
+                .sort({ createdAt: -1 });
         } else {
-            complaints = await Complaint.find().sort({ createdAt: -1 });
+            complaints = await Complaint.find()
+                .populate('department')
+                .populate('createdBy', 'name email role')
+                .sort({ createdAt: -1 });
         }
         res.json(complaints);
     } catch (err) {
@@ -65,7 +97,10 @@ exports.getComplaints = async (req, res) => {
 // Get a single complaint by ID
 exports.getComplaintById = async (req, res) => {
     try {
-        const complaint = await Complaint.findById(req.params.id);
+        const complaint = await Complaint.findById(req.params.id)
+            .populate('department')
+            .populate('createdBy', 'name email role');
+
         if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
         res.json(complaint);
     } catch (err) {
@@ -77,14 +112,75 @@ exports.getComplaintById = async (req, res) => {
 exports.updateComplaintStatus = async (req, res) => {
     try {
         const { status } = req.body;
-        const complaint = await Complaint.findByIdAndUpdate(
-            req.params.id,
-            { status },
-            { new: true }
-        );
+        const complaint = await Complaint.findById(req.params.id);
+
         if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-        res.json({ message: 'Status updated', complaint });
+
+        complaint.status = status;
+        await complaint.save();
+
+        const populated = await Complaint.findById(complaint._id)
+            .populate('department')
+            .populate('createdBy', 'name email role');
+
+        res.json({ message: 'Status updated', complaint: populated });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
+// Add resolution expense to a complaint (corporator/admin only)
+exports.addResolutionExpense = async (req, res) => {
+    try {
+        const { item, cost, note } = req.body;
+        const complaintId = req.params.id;
+
+        if (!item || cost === undefined || Number(cost) <= 0) {
+            return res.status(400).json({ message: 'Item name and positive cost amount are required' });
+        }
+
+        const complaint = await Complaint.findById(complaintId);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        // Add expense item
+        const expenseItemCost = Number(cost);
+        complaint.resolutionExpenses.push({
+            item,
+            cost: expenseItemCost,
+            note: note || '',
+            addedAt: new Date()
+        });
+
+        // Recalculate total resolutionCost
+        complaint.resolutionCost = complaint.resolutionExpenses.reduce((sum, exp) => sum + exp.cost, 0);
+
+        // If complaint is linked to a department, increase department spentBudget
+        let deptWarning = null;
+        if (complaint.department) {
+            const dept = await Department.findById(complaint.department);
+            if (dept) {
+                dept.spentBudget += expenseItemCost;
+                await dept.save();
+
+                const remaining = dept.budget - dept.spentBudget;
+                if (remaining < 0) {
+                    deptWarning = `Warning: Department "${dept.name}" budget exceeded by ₹${Math.abs(remaining)}. Please request additional budget from Admin.`;
+                }
+            }
+        }
+
+        await complaint.save();
+
+        const updated = await Complaint.findById(complaintId)
+            .populate('department')
+            .populate('createdBy', 'name email role');
+
+        res.status(201).json({
+            message: 'Resolution expense added successfully',
+            complaint: updated,
+            warning: deptWarning
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error adding resolution expense', error: err.message });
     }
 };
