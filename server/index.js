@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
 const startEscalationJob = require('./utils/escalationJob');
@@ -10,12 +11,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.send('Nivaran API is running');
-});
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
+
+// SPA fallback route (serve index.html for non-api routes)
+app.get(/.*/, (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
