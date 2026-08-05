@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
+const budgetRoutes = require('./routes/budgetRoutes');
 const startEscalationJob = require('./utils/escalationJob');
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.static(path.join(__dirname, '../client/dist')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/budget', budgetRoutes);
 
 // SPA fallback route (serve index.html for non-api routes)
 app.get(/.*/, (req, res, next) => {
