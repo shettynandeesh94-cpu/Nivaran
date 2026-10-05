@@ -33,6 +33,17 @@ const complaintSchema = new mongoose.Schema({
         sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         sentAt: { type: Date }
     },
+    aiAnalysis: {
+        detectedTags: [{ type: String }],
+        confidenceScore: { type: Number },
+        estimatedCost: { type: Number },
+        source: { type: String }
+    },
+    location: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String }
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Complaint', complaintSchema);
