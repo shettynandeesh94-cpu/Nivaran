@@ -33,10 +33,21 @@ const request = async (endpoint, options = {}) => {
 
     try {
         const response = await fetch(url, config);
-        const data = await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (e) {
+            data = { message: response.ok ? text : (response.status === 502 || response.status === 504 ? 'Server is starting up or unavailable. Please try again in a moment.' : 'Unexpected server response.') };
+        }
 
         if (!response.ok) {
-            const error = new Error(data.message || 'Something went wrong');
+            if (response.status === 401 && !endpoint.startsWith('/auth/')) {
+                clearToken();
+                clearUser();
+                window.dispatchEvent(new Event('auth:unauthorized'));
+            }
+            const error = new Error(data.message || `Server error (${response.status})`);
             error.status = response.status;
             error.data = data;
             throw error;
@@ -86,10 +97,25 @@ export const api = {
         });
     },
 
-    createComplaint: async (title, description, ward, attachment = null) => {
+    createComplaint: async (complaintData) => {
+        // Accepts object or traditional args
+        let bodyPayload;
+        if (typeof complaintData === 'object' && complaintData !== null && !Array.isArray(complaintData) && complaintData.title) {
+            bodyPayload = complaintData;
+        } else {
+            const [title, description, ward, attachment] = arguments;
+            bodyPayload = { title, description, ward, attachment };
+        }
         return await request('/complaints', {
             method: 'POST',
-            body: JSON.stringify({ title, description, ward, attachment }),
+            body: JSON.stringify(bodyPayload),
+        });
+    },
+
+    aiAnalyzeImage: async (image, mimeType = 'image/jpeg') => {
+        return await request('/complaints/ai-analyze-image', {
+            method: 'POST',
+            body: JSON.stringify({ image, mimeType }),
         });
     },
 

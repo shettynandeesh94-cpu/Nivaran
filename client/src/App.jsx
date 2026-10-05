@@ -27,14 +27,14 @@ const MainApp = () => {
   // Toasts state
   const [toasts, setToasts] = useState([]);
 
-  const showToast = (message, type = 'info') => {
+  const showToast = React.useCallback((message, type = 'info') => {
     const id = Date.now() + Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
-  };
+  }, []);
 
-  const removeToast = (id) => {
+  const removeToast = React.useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
   const triggerRefresh = () => {
     setRefreshKey((prev) => prev + 1);

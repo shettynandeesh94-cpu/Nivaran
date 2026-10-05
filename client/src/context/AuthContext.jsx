@@ -8,11 +8,21 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const storedToken = api.getToken();
         const storedUser = api.getUser();
-        if (storedUser) {
+        if (storedToken && storedUser) {
             setUser(storedUser);
+        } else {
+            api.logout();
+            setUser(null);
         }
         setLoading(false);
+
+        const handleUnauthorized = () => {
+            setUser(null);
+        };
+        window.addEventListener('auth:unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
     }, []);
 
     const login = async (email, password) => {
