@@ -1,14 +1,22 @@
 const Complaint = require('../models/Complaint');
 const Department = require('../models/Department');
 const { detectCategory, detectPriority, calculateDeadline } = require('../utils/smartEngine');
+const { analyzeCivicImage } = require('../utils/visionEngine');
 
 // Map complaint categories to default department names
 const CATEGORY_DEPT_MAP = {
     'Water Supply & Sewage': 'Water Supply',
+    'Water Supply': 'Water Supply',
     'Roads & Potholes': 'Roads & Infrastructure',
+    'Roads': 'Roads & Infrastructure',
     'Garbage & Sanitation': 'Sanitation & Waste',
+    'Sanitation': 'Sanitation & Waste',
     'Electricity & Streetlights': 'Electricity & Lighting',
+    'Streetlights': 'Electricity & Lighting',
     'Public Health & Hygiene': 'Public Health',
+    'Health': 'Public Health',
+    'Agriculture': 'Roads & Infrastructure',
+    'NREGA/MGNREGA': 'Roads & Infrastructure',
 };
 
 // Helper: Find or assign department ID based on category
@@ -21,13 +29,40 @@ const findDepartmentForCategory = async (category) => {
     return dept ? dept._id : null;
 };
 
-// Create a new complaint (with smart engine: auto-category, auto-priority, auto-department)
+// Vision AI Image Analyzer endpoint
+exports.aiAnalyzeImage = async (req, res) => {
+    try {
+        const { image, mimeType } = req.body;
+        if (!image) {
+            return res.status(400).json({ message: 'Image payload is required for Vision AI analysis.' });
+        }
+
+        const analysis = await analyzeCivicImage(image, mimeType || 'image/jpeg');
+
+        if (!analysis.isCivicIssue) {
+            return res.status(422).json({
+                message: 'Uploaded photo does not appear to be a recognized civic or public infrastructure issue.',
+                analysis,
+            });
+        }
+
+        res.json({
+            success: true,
+            analysis,
+        });
+    } catch (err) {
+        console.error('Error in aiAnalyzeImage controller:', err);
+        res.status(500).json({ message: 'Error analyzing civic image', error: err.message });
+    }
+};
+
+// Create a new complaint (with smart engine + vision AI analysis support)
 exports.createComplaint = async (req, res) => {
     try {
-        const { title, description, ward, attachment } = req.body;
+        const { title, description, ward, attachment, category: customCategory, priority: customPriority, aiAnalysis, location } = req.body;
 
-        const category = detectCategory(description);
-        const priority = detectPriority(description);
+        const category = customCategory || detectCategory(description);
+        const priority = customPriority || detectPriority(description);
         const deadline = calculateDeadline(priority);
         const departmentId = await findDepartmentForCategory(category);
 
@@ -61,6 +96,8 @@ exports.createComplaint = async (req, res) => {
             attachment: attachment || null,
             department: departmentId,
             createdBy: req.user.id,
+            aiAnalysis: aiAnalysis || undefined,
+            location: location || undefined,
         });
 
         await newComplaint.save();

@@ -35,7 +35,15 @@ exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
+        const searchStr = email ? email.trim() : '';
+        const user = await User.findOne({
+            $or: [
+                { email: new RegExp('^' + searchStr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') },
+                { email: searchStr },
+                { name: new RegExp('^' + searchStr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') },
+                { name: searchStr }
+            ]
+        });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }

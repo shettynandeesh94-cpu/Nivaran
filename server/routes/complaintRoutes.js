@@ -8,9 +8,11 @@ const {
     addResolutionExpense,
     requestExtension,
     sendAdminClarification,
+    aiAnalyzeImage,
 } = require('../controllers/complaintController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
+router.post('/ai-analyze-image', protect, aiAnalyzeImage);
 router.post('/', protect, createComplaint);
 router.get('/', protect, getComplaints);
 router.get('/:id', protect, getComplaintById);
