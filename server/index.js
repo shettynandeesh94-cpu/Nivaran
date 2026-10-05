@@ -8,6 +8,8 @@ const complaintRoutes = require('./routes/complaintRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
 const startEscalationJob = require('./utils/escalationJob');
 
+const seedData = require('./utils/seedData');
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -28,14 +30,41 @@ app.get(/.*/, (req, res, next) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log('MongoDB connected');
-        startEscalationJob();
-    })
-    .catch((err) => console.error('MongoDB connection error:', err));
+async function startServer() {
+    try {
+        console.log('Connecting to MongoDB...');
+        await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 4000 });
+        console.log('Connected to MongoDB Atlas');
+    } catch (err) {
+        console.warn('MongoDB Atlas connection failed:', err.message);
+        console.log('Falling back to local in-memory MongoDB server...');
+        try {
+            const fs = require('fs');
+            const { MongoMemoryServer } = require('mongodb-memory-server');
+            const dbPath = path.join(__dirname, '.mongo_temp');
+            if (!fs.existsSync(dbPath)) {
+                fs.mkdirSync(dbPath, { recursive: true });
+            }
+            const mongoServer = await MongoMemoryServer.create({
+                instance: { dbPath }
+            });
+            const mongoUri = mongoServer.getUri();
+            await mongoose.connect(mongoUri);
+            console.log('Successfully connected to local in-memory MongoDB!');
+        } catch (memErr) {
+            console.error('Failed to start in-memory MongoDB:', memErr.message);
+        }
+    }
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+    if (mongoose.connection.readyState === 1) {
+        startEscalationJob();
+        await seedData();
+    }
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+startServer();
