@@ -235,9 +235,16 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                     </div>
                                 )}
 
-                                {/* Photo Proof Attachment Evidence */}
+                                {/* Photo Proof Attachment Evidence & AI Vision Insights */}
                                 <div className="detail-section">
-                                    <h4><i className="fa-solid fa-camera" style={{ color: 'var(--secondary)', marginRight: '6px' }}></i> Issue Photo Evidence</h4>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <h4><i className="fa-solid fa-camera" style={{ color: 'var(--secondary)', marginRight: '6px' }}></i> Issue Photo Evidence</h4>
+                                        {complaint.aiAnalysis?.source && (
+                                            <span className="ai-verified-badge">
+                                                <i className="fa-solid fa-robot"></i> AI Inspected
+                                            </span>
+                                        )}
+                                    </div>
                                     {complaint.attachment ? (
                                         <div className="photo-proof-card">
                                             <img 
@@ -250,6 +257,43 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                             <div className="photo-proof-caption">
                                                 <i className="fa-solid fa-shield-halved" style={{ color: 'var(--status-resolved)' }}></i> Photo proof uploaded by citizen upon grievance submission.
                                             </div>
+
+                                            {/* AI Inspection Insights Box */}
+                                            {complaint.aiAnalysis && (
+                                                <div className="modal-ai-insights">
+                                                    <div className="modal-ai-header">
+                                                        <span className="ai-robot-badge">
+                                                            <i className="fa-solid fa-wand-magic-sparkles"></i> Vision AI Inspection
+                                                        </span>
+                                                        {complaint.aiAnalysis.confidenceScore && (
+                                                            <span className="ai-confidence-badge">
+                                                                {complaint.aiAnalysis.confidenceScore}% Confidence
+                                                            </span>
+                                                        )}
+                                                        {complaint.aiAnalysis.estimatedCost > 0 && (
+                                                            <span className="ai-cost-badge">
+                                                                Est. Repair: ₹{complaint.aiAnalysis.estimatedCost.toLocaleString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {complaint.aiAnalysis.detectedTags && complaint.aiAnalysis.detectedTags.length > 0 && (
+                                                        <div className="ai-tags-list" style={{ marginTop: '6px' }}>
+                                                            {complaint.aiAnalysis.detectedTags.map((tag, idx) => (
+                                                                <span key={idx} className="ai-tag-chip">
+                                                                    #{tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Location Tag */}
+                                            {complaint.location?.latitude && (
+                                                <div className="modal-gps-tag">
+                                                    <i className="fa-solid fa-location-crosshairs"></i> GPS: {complaint.location.latitude.toFixed(4)}°, {complaint.location.longitude.toFixed(4)}° ({complaint.ward})
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="empty-expenses-box">
