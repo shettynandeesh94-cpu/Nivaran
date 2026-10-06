@@ -11,7 +11,24 @@ const complaintSchema = new mongoose.Schema({
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     deadline: { type: Date },
-    attachment: { type: String }, // file path/URL
+    attachment: { type: String }, // file path/URL (Initial/Before photo)
+    reportCount: { type: Number, default: 1 },
+    additionalEvidence: [{
+        attachment: { type: String },
+        description: { type: String },
+        reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        reportedAt: { type: Date, default: Date.now }
+    }],
+    resolutionAttachment: { type: String }, // file path/URL (After/Resolution photo)
+    resolutionVerification: {
+        isVerified: { type: Boolean, default: false },
+        verifiedAt: { type: Date },
+        verifiedBy: { type: String, default: 'AI_VISION_AUTO_ENGINE' },
+        confidenceScore: { type: Number },
+        summary: { type: String },
+        beforeAfterComparison: { type: String },
+        status: { type: String, enum: ['PENDING', 'VERIFIED_RESOLVED', 'REJECTED_UNRESOLVED'], default: 'PENDING' }
+    },
     resolutionCost: { type: Number, default: 0 },
     resolutionExpenses: [{
         item: { type: String, required: true },

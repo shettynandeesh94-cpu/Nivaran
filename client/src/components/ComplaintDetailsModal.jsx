@@ -28,6 +28,10 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
     const [approveExtCheck, setApproveExtCheck] = useState(true);
     const [sendingClarification, setSendingClarification] = useState(false);
 
+    // AI Before vs After Resolution Verification states
+    const [resolutionImage, setResolutionImage] = useState(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+
     // Fetch Details on Open/ID change
     useEffect(() => {
         if (!isOpen || !complaintId) return;
@@ -38,6 +42,7 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                 const data = await api.getComplaintById(complaintId);
                 setComplaint(data);
                 setStatusValue(data.status);
+                setResolutionImage(data.resolutionAttachment || null);
                 if (data.extensionRequest?.daysRequested) {
                     setAdminAddDays(data.extensionRequest.daysRequested.toString());
                 }
@@ -168,6 +173,54 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         }
     };
 
+    const handleResolutionFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select a valid image file (JPG, PNG, WEBP)', 'error');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Resolution image file size should be under 5MB', 'error');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setResolutionImage(reader.result);
+            showToast('Resolution photo attached. Click "Run AI Verification" to verify and auto-close.', 'info');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleAutoVerifyAndResolve = async () => {
+        if (!resolutionImage) {
+            showToast('Please upload or select the Resolution (After) photo first.', 'error');
+            return;
+        }
+
+        setIsVerifying(true);
+        showToast('🤖 AI Vision is conducting forensic Before vs. After inspection...', 'info');
+
+        try {
+            const res = await api.autoVerifyAndResolveComplaint(complaintId, resolutionImage);
+            if (res.isResolved) {
+                showToast('✅ Issue Verified by AI! Complaint autonomously marked as RESOLVED.', 'success');
+            } else {
+                showToast('⚠️ AI Verification Flagged Incomplete Repair: Problem appears unresolved or photo is invalid.', 'warning');
+            }
+            setComplaint(res.complaint);
+            setStatusValue(res.complaint.status);
+            refreshDashboard();
+        } catch (err) {
+            showToast(err.message || 'Error running AI Resolution Verification', 'error');
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
     const getPriorityClass = (priority) => {
         if (priority === 'HIGH') return 'badge-high';
         if (priority === 'MEDIUM') return 'badge-medium';
@@ -235,70 +288,204 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                     </div>
                                 )}
 
-                                {/* Photo Proof Attachment Evidence & AI Vision Insights */}
+                                {/* Autonomous AI Before vs After Visual Verification Section */}
                                 <div className="detail-section">
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <h4><i className="fa-solid fa-camera" style={{ color: 'var(--secondary)', marginRight: '6px' }}></i> Issue Photo Evidence</h4>
-                                        {complaint.aiAnalysis?.source && (
+                                        <h4>
+                                            <i className="fa-solid fa-wand-magic-sparkles" style={{ color: 'var(--secondary)', marginRight: '6px' }}></i> 
+                                            Visual Evidence & AI Auto-Verification
+                                        </h4>
+                                        {complaint.resolutionVerification?.isVerified ? (
+                                            <span className="ai-verified-badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                                                <i className="fa-solid fa-circle-check"></i> AI Auto-Verified
+                                            </span>
+                                        ) : complaint.aiAnalysis?.source ? (
                                             <span className="ai-verified-badge">
                                                 <i className="fa-solid fa-robot"></i> AI Inspected
                                             </span>
-                                        )}
+                                        ) : null}
                                     </div>
-                                    {complaint.attachment ? (
-                                        <div className="photo-proof-card">
-                                            <img 
-                                                src={complaint.attachment} 
-                                                alt="Citizen issue proof" 
-                                                className="photo-proof-img"
-                                                onClick={() => window.open(complaint.attachment, '_blank')}
-                                                title="Click to open full resolution image in new tab"
-                                            />
-                                            <div className="photo-proof-caption">
-                                                <i className="fa-solid fa-shield-halved" style={{ color: 'var(--status-resolved)' }}></i> Photo proof uploaded by citizen upon grievance submission.
+
+                                    {/* Side-by-Side Before vs After Grid */}
+                                    <div className="before-after-grid">
+                                        {/* BEFORE Photo Box */}
+                                        <div className="before-after-card">
+                                            <div className="before-after-header">
+                                                <span className="before-tag"><i className="fa-solid fa-triangle-exclamation"></i> BEFORE (Citizen Grievance)</span>
                                             </div>
-
-                                            {/* AI Inspection Insights Box */}
-                                            {complaint.aiAnalysis && (
-                                                <div className="modal-ai-insights">
-                                                    <div className="modal-ai-header">
-                                                        <span className="ai-robot-badge">
-                                                            <i className="fa-solid fa-wand-magic-sparkles"></i> Vision AI Inspection
-                                                        </span>
-                                                        {complaint.aiAnalysis.confidenceScore && (
-                                                            <span className="ai-confidence-badge">
-                                                                {complaint.aiAnalysis.confidenceScore}% Confidence
-                                                            </span>
-                                                        )}
-                                                        {complaint.aiAnalysis.estimatedCost > 0 && (
-                                                            <span className="ai-cost-badge">
-                                                                Est. Repair: ₹{complaint.aiAnalysis.estimatedCost.toLocaleString()}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {complaint.aiAnalysis.detectedTags && complaint.aiAnalysis.detectedTags.length > 0 && (
-                                                        <div className="ai-tags-list" style={{ marginTop: '6px' }}>
-                                                            {complaint.aiAnalysis.detectedTags.map((tag, idx) => (
-                                                                <span key={idx} className="ai-tag-chip">
-                                                                    #{tag}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Location Tag */}
-                                            {complaint.location?.latitude && (
-                                                <div className="modal-gps-tag">
-                                                    <i className="fa-solid fa-location-crosshairs"></i> GPS: {complaint.location.latitude.toFixed(4)}°, {complaint.location.longitude.toFixed(4)}° ({complaint.ward})
+                                            {complaint.attachment ? (
+                                                <img 
+                                                    src={complaint.attachment} 
+                                                    alt="Before defect" 
+                                                    className="before-after-img"
+                                                    onClick={() => window.open(complaint.attachment, '_blank')}
+                                                    title="Click to view full image"
+                                                />
+                                            ) : (
+                                                <div className="before-after-empty">
+                                                    <i className="fa-solid fa-image" style={{ opacity: 0.4, fontSize: '1.5rem' }}></i>
+                                                    <span>No initial photo</span>
                                                 </div>
                                             )}
                                         </div>
-                                    ) : (
-                                        <div className="empty-expenses-box">
-                                            <i className="fa-solid fa-image" style={{ opacity: 0.4 }}></i>
-                                            <p>No photo proof was attached for this complaint.</p>
+
+                                        {/* AFTER Photo Box */}
+                                        <div className="before-after-card">
+                                            <div className="before-after-header">
+                                                <span className="after-tag"><i className="fa-solid fa-circle-check"></i> AFTER (Repair Proof)</span>
+                                            </div>
+                                            {resolutionImage ? (
+                                                <div style={{ position: 'relative' }}>
+                                                    <img 
+                                                        src={resolutionImage} 
+                                                        alt="After repair proof" 
+                                                        className="before-after-img"
+                                                        onClick={() => window.open(resolutionImage, '_blank')}
+                                                        title="Click to view full image"
+                                                    />
+                                                    {complaint.status !== 'RESOLVED' && (
+                                                        <label className="change-photo-btn">
+                                                            <i className="fa-solid fa-camera"></i> Change Photo
+                                                            <input type="file" accept="image/*" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
+                                                        </label>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <label className="after-upload-dropzone">
+                                                    <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '1.8rem', color: 'var(--secondary)' }}></i>
+                                                    <span style={{ fontWeight: 600, marginTop: '6px' }}>Upload Resolution Photo</span>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Click to browse or take camera photo</span>
+                                                    <input type="file" accept="image/*" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Additional Community Photos & Angles if multiple citizens reported the same spot */}
+                                    {complaint.additionalEvidence && complaint.additionalEvidence.length > 0 && (
+                                        <div style={{ marginTop: '12px', background: 'rgba(255, 255, 255, 0.02)', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <i className="fa-solid fa-users" style={{ color: 'var(--secondary)' }}></i>
+                                                Additional Evidence Uploaded by Neighbors ({complaint.additionalEvidence.length} other photos):
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                {complaint.additionalEvidence.map((ev, idx) => (
+                                                    <div key={idx} style={{ flexShrink: 0, textAlign: 'center' }}>
+                                                        <img 
+                                                            src={ev.attachment} 
+                                                            alt={`Neighbor report ${idx+1}`} 
+                                                            style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                            onClick={() => window.open(ev.attachment, '_blank')}
+                                                            title={`Uploaded on ${new Date(ev.reportedAt).toLocaleDateString()}`}
+                                                        />
+                                                        <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                            Angle #{idx + 2}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Action Button: AI Before/After Auto-Verification (Eliminating Human Supervisor) */}
+                                    {complaint.status !== 'RESOLVED' && (
+                                        <div className="ai-verification-trigger-box" style={{ marginTop: '12px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                                                <div>
+                                                    <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <i className="fa-solid fa-brain" style={{ color: 'var(--secondary)' }}></i> Autonomous Resolution Engine
+                                                    </strong>
+                                                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                                        Gemini Vision compares Before vs. After photos to verify repair authenticity and auto-close ticket.
+                                                    </p>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-primary"
+                                                    onClick={handleAutoVerifyAndResolve}
+                                                    disabled={isVerifying || !resolutionImage}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '180px', justifyContent: 'center' }}
+                                                >
+                                                    {isVerifying ? (
+                                                        <>
+                                                            <i className="fa-solid fa-circle-notch fa-spin"></i>
+                                                            <span>AI Inspecting...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <i className="fa-solid fa-shield-halved"></i>
+                                                            <span>Run AI Verification & Auto-Resolve</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* AI Forensic Verification Report Card */}
+                                    {complaint.resolutionVerification && complaint.resolutionVerification.status && (
+                                        <div className={`ai-verification-report-card ${complaint.resolutionVerification.isVerified ? 'verified' : 'rejected'}`}>
+                                            <div className="ai-report-header">
+                                                <div className="ai-report-badge">
+                                                    {complaint.resolutionVerification.isVerified ? (
+                                                        <><i className="fa-solid fa-circle-check"></i> Autonomous AI Verification: RESOLVED</>
+                                                    ) : (
+                                                        <><i className="fa-solid fa-circle-xmark"></i> AI Verification: REJECTED (Unresolved)</>
+                                                    )}
+                                                </div>
+                                                {complaint.resolutionVerification.confidenceScore && (
+                                                    <span className="ai-confidence-pill">
+                                                        {complaint.resolutionVerification.confidenceScore}% Confidence Score
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="ai-report-summary">{complaint.resolutionVerification.summary}</p>
+                                            {complaint.resolutionVerification.beforeAfterComparison && (
+                                                <div className="ai-report-comparison">
+                                                    <strong>Forensic Analysis:</strong> {complaint.resolutionVerification.beforeAfterComparison}
+                                                </div>
+                                            )}
+                                            <div className="ai-report-footer">
+                                                <span><i className="fa-solid fa-robot"></i> Verified by: {complaint.resolutionVerification.verifiedBy || 'AI_VISION_AUTO_ENGINE'}</span>
+                                                <span><i className="fa-solid fa-clock"></i> {new Date(complaint.resolutionVerification.verifiedAt || complaint.updatedAt).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* AI Initial Inspection Tags & GPS */}
+                                    {complaint.aiAnalysis && (
+                                        <div className="modal-ai-insights" style={{ marginTop: '10px' }}>
+                                            <div className="modal-ai-header">
+                                                <span className="ai-robot-badge">
+                                                    <i className="fa-solid fa-wand-magic-sparkles"></i> Initial Vision Classification
+                                                </span>
+                                                {complaint.aiAnalysis.confidenceScore && (
+                                                    <span className="ai-confidence-badge">
+                                                        {complaint.aiAnalysis.confidenceScore}% Initial Confidence
+                                                    </span>
+                                                )}
+                                                {complaint.aiAnalysis.estimatedCost > 0 && (
+                                                    <span className="ai-cost-badge">
+                                                        Auto-Estimated Cost: ₹{complaint.aiAnalysis.estimatedCost.toLocaleString('en-IN')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {complaint.aiAnalysis.detectedTags && complaint.aiAnalysis.detectedTags.length > 0 && (
+                                                <div className="ai-tags-list" style={{ marginTop: '6px' }}>
+                                                    {complaint.aiAnalysis.detectedTags.map((tag, idx) => (
+                                                        <span key={idx} className="ai-tag-chip">
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* GPS Tag */}
+                                    {complaint.location?.latitude && (
+                                        <div className="modal-gps-tag" style={{ marginTop: '8px' }}>
+                                            <i className="fa-solid fa-location-crosshairs"></i> GPS: {complaint.location.latitude.toFixed(4)}°, {complaint.location.longitude.toFixed(4)}° ({complaint.ward})
                                         </div>
                                     )}
                                 </div>

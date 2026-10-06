@@ -119,6 +119,13 @@ export const api = {
         });
     },
 
+    autoVerifyAndResolveComplaint: async (id, resolutionImage) => {
+        return await request(`/complaints/${id}/auto-verify-resolve`, {
+            method: 'POST',
+            body: JSON.stringify({ resolutionImage }),
+        });
+    },
+
     updateComplaintStatus: async (id, status) => {
         return await request(`/complaints/${id}/status`, {
             method: 'PATCH',

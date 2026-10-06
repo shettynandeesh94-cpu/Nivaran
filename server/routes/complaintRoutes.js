@@ -9,10 +9,12 @@ const {
     requestExtension,
     sendAdminClarification,
     aiAnalyzeImage,
+    autoVerifyAndResolveComplaint,
 } = require('../controllers/complaintController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 router.post('/ai-analyze-image', protect, aiAnalyzeImage);
+router.post('/:id/auto-verify-resolve', protect, autoVerifyAndResolveComplaint);
 router.post('/', protect, createComplaint);
 router.get('/', protect, getComplaints);
 router.get('/:id', protect, getComplaintById);
