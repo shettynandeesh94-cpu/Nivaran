@@ -33,6 +33,13 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
     const [stats, setStats] = useState({ total: 0, critical: 0, resolved: 0 });
     const [streetViewData, setStreetViewData] = useState(null);
 
+    // In-Website Road Driving & Street Cruiser Mode
+    const [isDrivingMode, setIsDrivingMode] = useState(false);
+    const [driveSpeed, setDriveSpeed] = useState(1); // 1 = Walk, 2 = Cruiser, 3 = Sprint
+    const [isAutoPatrolling, setIsAutoPatrolling] = useState(false);
+    const [currentCenter, setCurrentCenter] = useState(DEFAULT_CENTER);
+    const autoPatrolTimerRef = useRef(null);
+
     // Derive coordinates for a complaint (uses actual GPS or pseudo-deterministic ward coordinates)
     const getCoordinatesForComplaint = (c, index) => {
         if (c.location && c.location.latitude && c.location.longitude) {
@@ -112,7 +119,12 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
             mapInstanceRef.current = map;
             markersLayerRef.current = markersLayer;
 
-            // Allow clicking anywhere on the map to open 360° Street View
+            map.on('move', () => {
+                const c = map.getCenter();
+                setCurrentCenter([c.lat, c.lng]);
+            });
+
+            // Allow right-clicking anywhere on the map to inspect
             map.on('contextmenu', (e) => {
                 const { lat, lng } = e.latlng;
                 setStreetViewData({
@@ -144,10 +156,17 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
         }
     }, [mapStyle]);
 
-    // Pan and Zoom Controller Helpers
+    // Pan and Drive Controller Helpers
+    const getStepSize = () => {
+        if (driveSpeed === 1) return 120; // Walk pace
+        if (driveSpeed === 2) return 240; // Car pace
+        return 450; // Sprint pace
+    };
+
     const handlePan = (dx, dy) => {
         if (mapInstanceRef.current) {
-            mapInstanceRef.current.panBy([dx, dy], { animate: true, duration: 0.35 });
+            const step = getStepSize();
+            mapInstanceRef.current.panBy([dx * (step / 150), dy * (step / 150)], { animate: true, duration: 0.3 });
         }
     };
 
@@ -163,36 +182,88 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
         }
     };
 
-    // Keyboard Arrow Keys Navigation Listener
+    // Toggle In-App Road Drive Mode
+    const toggleRoadDriveMode = () => {
+        if (!mapInstanceRef.current) return;
+        if (!isDrivingMode) {
+            setIsDrivingMode(true);
+            mapInstanceRef.current.setZoom(18, { animate: true });
+        } else {
+            setIsDrivingMode(false);
+            setIsAutoPatrolling(false);
+            if (autoPatrolTimerRef.current) clearInterval(autoPatrolTimerRef.current);
+            mapInstanceRef.current.setZoom(14, { animate: true });
+        }
+    };
+
+    // Toggle Continuous Auto-Patrol along the road
+    const toggleAutoPatrol = () => {
+        if (!isAutoPatrolling) {
+            setIsAutoPatrolling(true);
+            setIsDrivingMode(true);
+            if (mapInstanceRef.current) mapInstanceRef.current.setZoom(18, { animate: true });
+
+            autoPatrolTimerRef.current = setInterval(() => {
+                if (mapInstanceRef.current) {
+                    mapInstanceRef.current.panBy([0, -80], { animate: true, duration: 0.5 });
+                }
+            }, 600);
+        } else {
+            setIsAutoPatrolling(false);
+            if (autoPatrolTimerRef.current) {
+                clearInterval(autoPatrolTimerRef.current);
+                autoPatrolTimerRef.current = null;
+            }
+        }
+    };
+
+    // Jump / Fly to next nearest incident on the street
+    const handleFlyToNextIncident = () => {
+        if (!mapInstanceRef.current || complaints.length === 0) return;
+        const randomComplaint = complaints[Math.floor(Math.random() * complaints.length)];
+        const coords = getCoordinatesForComplaint(randomComplaint, 0);
+        mapInstanceRef.current.flyTo(coords, 18, { duration: 1.5 });
+    };
+
+    // Cleanup auto patrol timer
+    useEffect(() => {
+        return () => {
+            if (autoPatrolTimerRef.current) clearInterval(autoPatrolTimerRef.current);
+        };
+    }, []);
+
+    // Keyboard Arrow Keys & WASD Road Drive Listener
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (!mapInstanceRef.current) return;
-            // Ignore if user is typing in an input or select
             if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
-            const PAN_STEP = 150;
+            const step = getStepSize();
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
                 e.preventDefault();
-                mapInstanceRef.current.panBy([0, -PAN_STEP], { animate: true });
+                mapInstanceRef.current.panBy([0, -step], { animate: true, duration: 0.25 });
             } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
                 e.preventDefault();
-                mapInstanceRef.current.panBy([0, PAN_STEP], { animate: true });
+                mapInstanceRef.current.panBy([0, step], { animate: true, duration: 0.25 });
             } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
                 e.preventDefault();
-                mapInstanceRef.current.panBy([-PAN_STEP, 0], { animate: true });
+                mapInstanceRef.current.panBy([-step, 0], { animate: true, duration: 0.25 });
             } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
                 e.preventDefault();
-                mapInstanceRef.current.panBy([PAN_STEP, 0], { animate: true });
+                mapInstanceRef.current.panBy([step, 0], { animate: true, duration: 0.25 });
             } else if (e.key === '+' || e.key === '=') {
                 mapInstanceRef.current.zoomIn();
             } else if (e.key === '-' || e.key === '_') {
                 mapInstanceRef.current.zoomOut();
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                toggleAutoPatrol();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [driveSpeed, isAutoPatrolling]);
 
     // Update Markers when complaints or filters change
     useEffect(() => {
@@ -405,7 +476,15 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                     </select>
                 </div>
 
-                <button className="btn btn-secondary btn-sm" onClick={handleRecenter} style={{ marginLeft: 'auto' }}>
+                <button 
+                    type="button"
+                    className={`btn btn-sm ${isDrivingMode ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={toggleRoadDriveMode}
+                    style={{ marginLeft: 'auto', fontWeight: 700 }}
+                >
+                    <i className="fa-solid fa-car-side"></i> {isDrivingMode ? '🚗 Driving Mode Active' : '🚗 Road Drive Mode'}
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={handleRecenter}>
                     <i className="fa-solid fa-crosshairs"></i> Recenter
                 </button>
             </div>
@@ -424,23 +503,70 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                     <span className="stat-dot resolved"></span>
                     <span>AI-Verified Resolved: <strong>{stats.resolved}</strong></span>
                 </div>
+                {isDrivingMode && (
+                    <div className="map-stat-pill driving-hud-pill">
+                        <i className="fa-solid fa-satellite-dish"></i>
+                        <span>GPS: <strong>{currentCenter[0].toFixed(5)}°, {currentCenter[1].toFixed(5)}°</strong></span>
+                    </div>
+                )}
             </div>
 
             {/* Leaflet Map Canvas with Floating Pan D-Pad Controller */}
             <div className="map-canvas-wrapper">
                 <div className="map-canvas-container" ref={mapContainerRef}></div>
 
-                {/* Floating HUD D-Pad Pan & Navigation Controller */}
-                <div className="map-dpad-controller">
-                    <div className="dpad-header">
-                        <i className="fa-solid fa-compass"></i> PAN CONTROLS
+                {/* Central Road Inspection Crosshair / Vehicle Reticle */}
+                {isDrivingMode && (
+                    <div className="road-cruiser-reticle" aria-hidden="true">
+                        <div className="reticle-car-icon">
+                            <i className="fa-solid fa-location-arrow"></i>
+                        </div>
+                        <div className="reticle-label">Street Inspection Level</div>
                     </div>
+                )}
+
+                {/* Floating HUD D-Pad & Road Cruiser Controller */}
+                <div className={`map-dpad-controller ${isDrivingMode ? 'driving-active' : ''}`}>
+                    <div className="dpad-header">
+                        <i className="fa-solid fa-gamepad"></i> {isDrivingMode ? 'ROAD CRUISER' : 'PAN CONTROLS'}
+                    </div>
+
+                    {/* Speed Controls in Driving Mode */}
+                    {isDrivingMode && (
+                        <div className="dpad-speed-toggle">
+                            <button 
+                                type="button" 
+                                className={`speed-btn ${driveSpeed === 1 ? 'active' : ''}`}
+                                onClick={() => setDriveSpeed(1)}
+                                title="Walking Pace"
+                            >
+                                🚶 1x
+                            </button>
+                            <button 
+                                type="button" 
+                                className={`speed-btn ${driveSpeed === 2 ? 'active' : ''}`}
+                                onClick={() => setDriveSpeed(2)}
+                                title="Driving Pace"
+                            >
+                                🚗 2x
+                            </button>
+                            <button 
+                                type="button" 
+                                className={`speed-btn ${driveSpeed === 3 ? 'active' : ''}`}
+                                onClick={() => setDriveSpeed(3)}
+                                title="Sprint Pace"
+                            >
+                                ⚡ 3x
+                            </button>
+                        </div>
+                    )}
+
                     <div className="dpad-cross">
                         <button 
                             type="button" 
                             className="dpad-btn dpad-up" 
-                            onClick={() => handlePan(0, -180)}
-                            title="Pan Up / North [↑ / W]"
+                            onClick={() => handlePan(0, -150)}
+                            title="Drive Forward / North [↑ / W]"
                         >
                             <i className="fa-solid fa-arrow-up"></i>
                         </button>
@@ -448,8 +574,8 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                             <button 
                                 type="button" 
                                 className="dpad-btn dpad-left" 
-                                onClick={() => handlePan(-180, 0)}
-                                title="Pan Left / West [← / A]"
+                                onClick={() => handlePan(-150, 0)}
+                                title="Steer Left / West [← / A]"
                             >
                                 <i className="fa-solid fa-arrow-left"></i>
                             </button>
@@ -464,8 +590,8 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                             <button 
                                 type="button" 
                                 className="dpad-btn dpad-right" 
-                                onClick={() => handlePan(180, 0)}
-                                title="Pan Right / East [→ / D]"
+                                onClick={() => handlePan(150, 0)}
+                                title="Steer Right / East [→ / D]"
                             >
                                 <i className="fa-solid fa-arrow-right"></i>
                             </button>
@@ -473,10 +599,30 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                         <button 
                             type="button" 
                             className="dpad-btn dpad-down" 
-                            onClick={() => handlePan(0, 180)}
-                            title="Pan Down / South [↓ / S]"
+                            onClick={() => handlePan(0, 150)}
+                            title="Drive Reverse / South [↓ / S]"
                         >
                             <i className="fa-solid fa-arrow-down"></i>
+                        </button>
+                    </div>
+
+                    {/* Auto Patrol & Fly to Next Buttons */}
+                    <div className="dpad-actions-row">
+                        <button 
+                            type="button" 
+                            className={`dpad-patrol-btn ${isAutoPatrolling ? 'active-patrol' : ''}`}
+                            onClick={toggleAutoPatrol}
+                            title="Auto-Drive along the road [Spacebar]"
+                        >
+                            <i className="fa-solid fa-play"></i> {isAutoPatrolling ? 'Cruising...' : 'Auto-Patrol'}
+                        </button>
+                        <button 
+                            type="button" 
+                            className="dpad-fly-btn"
+                            onClick={handleFlyToNextIncident}
+                            title="Fly to next road defect"
+                        >
+                            <i className="fa-solid fa-forward-step"></i> Next Defect
                         </button>
                     </div>
 
@@ -488,7 +634,7 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                             onClick={handleZoomIn}
                             title="Zoom In [+]"
                         >
-                            <i className="fa-solid fa-plus"></i> Zoom In
+                            <i className="fa-solid fa-plus"></i>
                         </button>
                         <button 
                             type="button" 
@@ -496,30 +642,17 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                             onClick={handleZoomOut}
                             title="Zoom Out [-]"
                         >
-                            <i className="fa-solid fa-minus"></i> Zoom Out
+                            <i className="fa-solid fa-minus"></i>
+                        </button>
+                        <button 
+                            type="button" 
+                            className={`dpad-mode-toggle-btn ${isDrivingMode ? 'active' : ''}`}
+                            onClick={toggleRoadDriveMode}
+                            title="Toggle Street Drive Mode"
+                        >
+                            {isDrivingMode ? 'Exit Drive' : '🚗 Drive'}
                         </button>
                     </div>
-
-                    {/* 360 Street View Launcher */}
-                    <button 
-                        type="button"
-                        className="dpad-streetview-btn"
-                        onClick={() => {
-                            if (mapInstanceRef.current) {
-                                const center = mapInstanceRef.current.getCenter();
-                                setStreetViewData({
-                                    lat: center.lat,
-                                    lng: center.lng,
-                                    title: 'Live Road Inspection Point',
-                                    ward: 'City Center',
-                                    mode: 'satellite'
-                                });
-                            }
-                        }}
-                        title="Open 360° Road & Street View at Center"
-                    >
-                        <i className="fa-solid fa-person-walking"></i> 🚶 360° Road View
-                    </button>
                 </div>
             </div>
 
