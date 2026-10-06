@@ -54,16 +54,21 @@ const DEFAULT_TECHNICIANS = [
 const CATEGORY_SPECIALIZATION_MAP = {
     'Streetlights': 'Streetlights',
     'Electricity & Streetlights': 'Streetlights',
+    'Electricity & Lighting': 'Streetlights',
     'Roads': 'Roads',
     'Roads & Potholes': 'Roads',
+    'Roads & Infrastructure': 'Roads',
     'Water Supply': 'Water Supply',
     'Water Supply & Sewage': 'Water Supply',
     'Sanitation': 'Sanitation',
     'Garbage & Sanitation': 'Sanitation',
+    'Sanitation & Waste': 'Sanitation',
     'Health': 'Health',
+    'Public Health': 'Health',
     'Public Health & Hygiene': 'Health',
     'Agriculture': 'Roads',
     'NREGA/MGNREGA': 'Roads',
+    'General': 'Roads'
 };
 
 /**
@@ -80,6 +85,11 @@ async function ensureTechniciansSeeded() {
                     password: hashedPassword,
                 });
                 console.log(`[DispatchEngine] 👷 Seeded Field Technician: ${tech.name} (${tech.specialization})`);
+            } else if (!exists.specialization || !exists.phone) {
+                exists.specialization = tech.specialization;
+                exists.phone = tech.phone;
+                exists.role = 'technician';
+                await exists.save();
             }
         }
     } catch (err) {
@@ -95,7 +105,8 @@ async function autoDispatchComplaint(complaint) {
     try {
         await ensureTechniciansSeeded();
 
-        const specialization = CATEGORY_SPECIALIZATION_MAP[complaint.category] || 'Roads';
+        const cat = complaint.category || 'General';
+        const specialization = CATEGORY_SPECIALIZATION_MAP[cat] || 'Roads';
 
         // 1. Try finding a technician matching exact ward + specialization
         let technician = await User.findOne({
@@ -117,6 +128,11 @@ async function autoDispatchComplaint(complaint) {
             technician = await User.findOne({ role: 'technician' });
         }
 
+        // 4. Ultimate fallback to corporator or admin
+        if (!technician) {
+            technician = await User.findOne({ role: { $in: ['corporator', 'admin'] } });
+        }
+
         if (technician) {
             complaint.assignedTo = technician._id;
             complaint.assignedAt = new Date();
@@ -126,7 +142,7 @@ async function autoDispatchComplaint(complaint) {
                 complaint.status = 'IN_PROGRESS';
             }
 
-            console.log(`[DispatchEngine] ⚡ Zero-Touch Auto-Dispatched: Ticket "${complaint.title}" -> ${technician.name} (${technician.specialization}, ${technician.phone})`);
+            console.log(`[DispatchEngine] ⚡ Zero-Touch Auto-Dispatched: Ticket "${complaint.title}" -> ${technician.name} (${technician.specialization || technician.role}, ${technician.phone || ''})`);
             return technician;
         }
 

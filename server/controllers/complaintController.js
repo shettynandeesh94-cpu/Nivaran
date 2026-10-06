@@ -189,7 +189,12 @@ exports.createComplaint = async (req, res) => {
 exports.getComplaints = async (req, res) => {
     try {
         // Auto-dispatch any legacy unassigned open complaints in background
-        const unassigned = await Complaint.find({ assignedTo: { $exists: false } });
+        const unassigned = await Complaint.find({
+            $or: [
+                { assignedTo: { $exists: false } },
+                { assignedTo: null }
+            ]
+        });
         for (const c of unassigned) {
             await autoDispatchComplaint(c);
             await c.save();
