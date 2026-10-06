@@ -9,6 +9,8 @@ const complaintSchema = new mongoose.Schema({
     ward: { type: String, required: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    assignedAt: { type: Date },
+    autoDispatched: { type: Boolean, default: false },
     department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     deadline: { type: Date },
     attachment: { type: String }, // file path/URL (Initial/Before photo)

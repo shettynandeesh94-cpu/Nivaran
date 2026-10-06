@@ -2,6 +2,7 @@ const Complaint = require('../models/Complaint');
 const Department = require('../models/Department');
 const { detectCategory, detectPriority, calculateDeadline } = require('../utils/smartEngine');
 const { analyzeCivicImage, verifyResolutionImages, checkImageVisualMatch } = require('../utils/visionEngine');
+const { autoDispatchComplaint } = require('../utils/dispatchEngine');
 
 // Map complaint categories to default department names
 const CATEGORY_DEPT_MAP = {
@@ -168,28 +169,47 @@ exports.createComplaint = async (req, res) => {
         });
 
         await newComplaint.save();
+
+        // Autonomous Zero-Touch Auto-Dispatch to on-duty Field Technician
+        await autoDispatchComplaint(newComplaint);
+        await newComplaint.save();
+
         const populated = await Complaint.findById(newComplaint._id)
             .populate('department')
+            .populate('assignedTo', 'name email role specialization phone')
             .populate('createdBy', 'name email role');
 
-        res.status(201).json({ message: 'Complaint submitted successfully', complaint: populated });
+        res.status(201).json({ message: 'Complaint submitted and auto-dispatched to field technician successfully!', complaint: populated });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
 
-// Get all complaints (admin/corporator sees all; citizen sees only their own)
+// Get all complaints (admin/corporator sees all; citizen sees their own; technician sees assigned tasks)
 exports.getComplaints = async (req, res) => {
     try {
         let complaints;
         if (req.user.role === 'citizen') {
             complaints = await Complaint.find({ createdBy: req.user.id })
                 .populate('department')
+                .populate('assignedTo', 'name email role specialization phone')
+                .populate('createdBy', 'name email role')
+                .sort({ createdAt: -1 });
+        } else if (req.user.role === 'technician') {
+            complaints = await Complaint.find({
+                $or: [
+                    { assignedTo: req.user.id },
+                    { ward: req.user.ward }
+                ]
+            })
+                .populate('department')
+                .populate('assignedTo', 'name email role specialization phone')
                 .populate('createdBy', 'name email role')
                 .sort({ createdAt: -1 });
         } else {
             complaints = await Complaint.find()
                 .populate('department')
+                .populate('assignedTo', 'name email role specialization phone')
                 .populate('createdBy', 'name email role')
                 .sort({ createdAt: -1 });
         }
@@ -204,6 +224,7 @@ exports.getComplaintById = async (req, res) => {
     try {
         const complaint = await Complaint.findById(req.params.id)
             .populate('department')
+            .populate('assignedTo', 'name email role specialization phone')
             .populate('createdBy', 'name email role');
 
         if (!complaint) return res.status(404).json({ message: 'Complaint not found' });

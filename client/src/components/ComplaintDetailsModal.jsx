@@ -624,6 +624,28 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                         </span>
                                     </div>
                                     <div className="detail-meta-item">
+                                        <span className="detail-meta-label">Assigned Technician:</span>
+                                        <span className="detail-meta-val">
+                                            {complaint.assignedTo ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                                                    <span style={{ fontWeight: 600, color: 'var(--secondary)' }}>
+                                                        <i className="fa-solid fa-user-gear"></i> {complaint.assignedTo.name}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                                        {complaint.assignedTo.specialization || 'Field Worker'} • {complaint.assignedTo.phone || ''}
+                                                    </span>
+                                                    {complaint.autoDispatched && (
+                                                        <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', padding: '1px 6px', borderRadius: '4px', marginTop: '2px' }}>
+                                                            ⚡ Auto-Dispatched
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted">Unassigned</span>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="detail-meta-item">
                                         <span className="detail-meta-label">Complaint ID:</span>
                                         <span className="detail-meta-val" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
                                             {complaint._id}
