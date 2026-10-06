@@ -119,7 +119,8 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                     lat,
                     lng,
                     title: `Road Inspection Point`,
-                    ward: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+                    ward: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+                    mode: 'satellite'
                 });
             });
 
@@ -295,7 +296,8 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                         lat: coords[0],
                         lng: coords[1],
                         title: c.title,
-                        ward: c.ward
+                        ward: c.ward,
+                        mode: 'satellite'
                     });
                 };
             }
@@ -509,7 +511,8 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                                     lat: center.lat,
                                     lng: center.lng,
                                     title: 'Live Road Inspection Point',
-                                    ward: 'City Center'
+                                    ward: 'City Center',
+                                    mode: 'satellite'
                                 });
                             }
                         }}
