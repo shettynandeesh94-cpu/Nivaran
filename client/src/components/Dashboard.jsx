@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { SmartEngine } from '../utils/smartEngine';
+import { getAssignedTechnician } from '../utils/technicians';
 
 // --- SUB-COMPONENT: REAL-TIME INDIVIDUAL CELL COUNTDOWN TIMER ---
 const SlaCountdownCell = ({ deadline, status }) => {
@@ -474,13 +475,16 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                         <td className="complaint-title-cell">
                                                             <div>{c.title}</div>
                                                             <div className="complaint-desc-cell">{c.description}</div>
-                                                            {c.assignedTo && (
-                                                                <div style={{ fontSize: '0.72rem', color: 'var(--secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                                    <i className="fa-solid fa-user-gear"></i>
-                                                                    <span>{c.assignedTo.name} ({c.assignedTo.specialization || 'Field Worker'})</span>
-                                                                    {c.autoDispatched && <span style={{ fontSize: '0.65rem', background: 'rgba(56,189,248,0.15)', color: '#38bdf8', padding: '1px 5px', borderRadius: '3px' }}>⚡ Auto-Dispatched</span>}
-                                                                </div>
-                                                            )}
+                                                            {(() => {
+                                                                const tech = getAssignedTechnician(c);
+                                                                return tech ? (
+                                                                    <div style={{ fontSize: '0.72rem', color: 'var(--secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                        <i className="fa-solid fa-user-gear"></i>
+                                                                        <span>{tech.name} ({tech.specialization})</span>
+                                                                        <span style={{ fontSize: '0.65rem', background: 'rgba(56,189,248,0.15)', color: '#38bdf8', padding: '1px 5px', borderRadius: '3px' }}>⚡ Auto-Dispatched</span>
+                                                                    </div>
+                                                                ) : null;
+                                                            })()}
                                                         </td>
                                                         <td>
                                                             <span className="ward-tag" style={{ background: 'rgba(255,255,255,0.02)' }}>
@@ -811,13 +815,16 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                         <td className="complaint-title-cell">
                                                             <div>{c.title}</div>
                                                             <div className="complaint-desc-cell">{c.description}</div>
-                                                            {c.assignedTo && (
-                                                                <div style={{ fontSize: '0.72rem', color: 'var(--secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                                    <i className="fa-solid fa-user-gear"></i>
-                                                                    <span>{c.assignedTo.name} ({c.assignedTo.specialization || 'Field Worker'})</span>
-                                                                    {c.autoDispatched && <span style={{ fontSize: '0.65rem', background: 'rgba(56,189,248,0.15)', color: '#38bdf8', padding: '1px 5px', borderRadius: '3px' }}>⚡ Auto-Dispatched</span>}
-                                                                </div>
-                                                            )}
+                                                            {(() => {
+                                                                const tech = getAssignedTechnician(c);
+                                                                return tech ? (
+                                                                    <div style={{ fontSize: '0.72rem', color: 'var(--secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                        <i className="fa-solid fa-user-gear"></i>
+                                                                        <span>{tech.name} ({tech.specialization})</span>
+                                                                        <span style={{ fontSize: '0.65rem', background: 'rgba(56,189,248,0.15)', color: '#38bdf8', padding: '1px 5px', borderRadius: '3px' }}>⚡ Auto-Dispatched</span>
+                                                                    </div>
+                                                                ) : null;
+                                                            })()}
                                                         </td>
                                                         <td>
                                                             <span className="ward-tag" style={{ background: 'rgba(255,255,255,0.02)' }}>
