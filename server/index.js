@@ -56,9 +56,12 @@ async function startServer() {
         }
     }
 
+const { ensureTechniciansSeeded } = require('./utils/dispatchEngine');
+
     if (mongoose.connection.readyState === 1) {
         startEscalationJob();
         await seedData();
+        await ensureTechniciansSeeded();
     }
 
     const PORT = process.env.PORT || 5000;

@@ -188,6 +188,13 @@ exports.createComplaint = async (req, res) => {
 // Get all complaints (admin/corporator sees all; citizen sees their own; technician sees assigned tasks)
 exports.getComplaints = async (req, res) => {
     try {
+        // Auto-dispatch any legacy unassigned open complaints in background
+        const unassigned = await Complaint.find({ assignedTo: { $exists: false } });
+        for (const c of unassigned) {
+            await autoDispatchComplaint(c);
+            await c.save();
+        }
+
         let complaints;
         if (req.user.role === 'citizen') {
             complaints = await Complaint.find({ createdBy: req.user.id })
@@ -222,13 +229,21 @@ exports.getComplaints = async (req, res) => {
 // Get a single complaint by ID
 exports.getComplaintById = async (req, res) => {
     try {
-        const complaint = await Complaint.findById(req.params.id)
+        let complaint = await Complaint.findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        // If not assigned yet, automatically dispatch now!
+        if (!complaint.assignedTo) {
+            await autoDispatchComplaint(complaint);
+            await complaint.save();
+        }
+
+        const populated = await Complaint.findById(req.params.id)
             .populate('department')
             .populate('assignedTo', 'name email role specialization phone')
             .populate('createdBy', 'name email role');
 
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-        res.json(complaint);
+        res.json(populated);
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
