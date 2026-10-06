@@ -2,16 +2,22 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { getAssignedTechnician } from '../utils/technicians';
 
-// Default ward center coordinates (around city center)
+// Accurate ward center coordinates for Mangaluru city wards
 const WARD_COORDINATES = {
-    'Ward 1': [12.9716, 77.5946],
-    'Ward 2': [12.9810, 77.6050],
-    'Ward 3': [12.9630, 77.5850],
-    'Ward 4': [12.9550, 77.6100],
-    'Ward 5': [12.9900, 77.5750],
+    'Kadri South': [12.8732, 74.8580],
+    'Kadri North': [12.8835, 74.8565],
+    'Bejai': [12.8885, 74.8450],
+    'Bendoor': [12.8710, 74.8520],
+    'Lalbagh': [12.8805, 74.8410],
+    // Backward-compatible fallback keys
+    'Ward 1': [12.8732, 74.8580],
+    'Ward 2': [12.8835, 74.8565],
+    'Ward 3': [12.8885, 74.8450],
+    'Ward 4': [12.8710, 74.8520],
+    'Ward 5': [12.8805, 74.8410],
 };
 
-const DEFAULT_CENTER = [12.9716, 77.5946]; // Default City Center
+const DEFAULT_CENTER = [12.8797, 74.8465]; // Mangaluru City Center
 
 export const CityMapView = ({ complaints = [], onOpenDetails }) => {
     const mapContainerRef = useRef(null);
@@ -228,11 +234,11 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                     <label><i className="fa-solid fa-location-dot"></i> Ward:</label>
                     <select value={selectedWard} onChange={(e) => setSelectedWard(e.target.value)}>
                         <option value="ALL">All Wards</option>
-                        <option value="Ward 1">Ward 1</option>
-                        <option value="Ward 2">Ward 2</option>
-                        <option value="Ward 3">Ward 3</option>
-                        <option value="Ward 4">Ward 4</option>
-                        <option value="Ward 5">Ward 5</option>
+                        <option value="Kadri South">Kadri South</option>
+                        <option value="Kadri North">Kadri North</option>
+                        <option value="Bejai">Bejai</option>
+                        <option value="Bendoor">Bendoor</option>
+                        <option value="Lalbagh">Lalbagh</option>
                     </select>
                 </div>
 
