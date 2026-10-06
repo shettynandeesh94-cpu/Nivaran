@@ -1,0 +1,267 @@
+import React, { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import { getAssignedTechnician } from '../utils/technicians';
+
+// Default ward center coordinates (around city center)
+const WARD_COORDINATES = {
+    'Ward 1': [12.9716, 77.5946],
+    'Ward 2': [12.9810, 77.6050],
+    'Ward 3': [12.9630, 77.5850],
+    'Ward 4': [12.9550, 77.6100],
+    'Ward 5': [12.9900, 77.5750],
+};
+
+const DEFAULT_CENTER = [12.9716, 77.5946]; // Default City Center
+
+export const CityMapView = ({ complaints = [], onOpenDetails }) => {
+    const mapContainerRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const markersLayerRef = useRef(null);
+
+    const [selectedCategory, setSelectedCategory] = useState('ALL');
+    const [selectedStatus, setSelectedStatus] = useState('ALL');
+    const [selectedWard, setSelectedWard] = useState('ALL');
+    const [stats, setStats] = useState({ total: 0, critical: 0, resolved: 0 });
+
+    // Derive coordinates for a complaint (uses actual GPS or pseudo-deterministic ward coordinates)
+    const getCoordinatesForComplaint = (c, index) => {
+        if (c.location && c.location.latitude && c.location.longitude) {
+            return [c.location.latitude, c.location.longitude];
+        }
+        const base = WARD_COORDINATES[c.ward] || DEFAULT_CENTER;
+        // Subtle offset based on index so multiple complaints in the same ward don't overlap exactly
+        const angle = (index * 137.5 * Math.PI) / 180;
+        const radius = 0.003 + (index % 5) * 0.002;
+        return [base[0] + radius * Math.cos(angle), base[1] + radius * Math.sin(angle)];
+    };
+
+    // Initialize Leaflet Map
+    useEffect(() => {
+        if (!mapContainerRef.current) return;
+
+        if (!mapInstanceRef.current) {
+            const map = L.map(mapContainerRef.current, {
+                center: DEFAULT_CENTER,
+                zoom: 13,
+                zoomControl: true,
+            });
+
+            // CartoDB Dark Matter tile layer for premium dark command-center aesthetic
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19,
+            }).addTo(map);
+
+            const markersLayer = L.layerGroup().addTo(map);
+            mapInstanceRef.current = map;
+            markersLayerRef.current = markersLayer;
+        }
+
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, []);
+
+    // Update Markers when complaints or filters change
+    useEffect(() => {
+        if (!mapInstanceRef.current || !markersLayerRef.current) return;
+
+        const markersLayer = markersLayerRef.current;
+        markersLayer.clearLayers();
+
+        const filtered = complaints.filter((c) => {
+            const matchesCat = selectedCategory === 'ALL' || (c.category || '').toLowerCase().includes(selectedCategory.toLowerCase());
+            const matchesStatus = selectedStatus === 'ALL' || c.status === selectedStatus;
+            const matchesWard = selectedWard === 'ALL' || c.ward === selectedWard;
+            return matchesCat && matchesStatus && matchesWard;
+        });
+
+        // Compute stats
+        let criticalCount = 0;
+        let resolvedCount = 0;
+        const bounds = [];
+
+        filtered.forEach((c, idx) => {
+            const coords = getCoordinatesForComplaint(c, idx);
+            bounds.push(coords);
+
+            if (c.priority === 'HIGH' || c.status === 'ESCALATED') criticalCount++;
+            if (c.status === 'RESOLVED') resolvedCount++;
+
+            // Marker Color Logic
+            let pinColor = '#3b82f6'; // Blue
+            let pulseClass = '';
+            if (c.status === 'RESOLVED') {
+                pinColor = '#10b981'; // Green
+            } else if (c.status === 'ESCALATED' || c.priority === 'HIGH') {
+                pinColor = '#ef4444'; // Red
+                pulseClass = 'marker-pulse-critical';
+            } else if (c.status === 'IN_PROGRESS') {
+                pinColor = '#f59e0b'; // Yellow/Orange
+            }
+
+            // Custom Icon
+            const iconHtml = `
+                <div class="custom-map-pin ${pulseClass}" style="background: ${pinColor};">
+                    <i class="fa-solid ${getCategoryIcon(c.category)}"></i>
+                </div>
+            `;
+
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-div-icon',
+                iconSize: [34, 34],
+                iconAnchor: [17, 34],
+                popupAnchor: [0, -32],
+            });
+
+            const tech = getAssignedTechnician(c);
+
+            // Popup HTML
+            const popupContent = document.createElement('div');
+            popupContent.className = 'map-popup-card';
+            popupContent.innerHTML = `
+                <div class="map-popup-header" style="border-left: 3px solid ${pinColor};">
+                    <span class="map-popup-badge" style="background: ${pinColor}20; color: ${pinColor};">
+                        ${c.status}
+                    </span>
+                    <span class="map-popup-ward"><i class="fa-solid fa-location-dot"></i> ${c.ward}</span>
+                </div>
+                ${c.attachment ? `<img src="${c.attachment}" alt="Defect proof" class="map-popup-img" />` : ''}
+                <h4 class="map-popup-title">${c.title}</h4>
+                <p class="map-popup-desc">${c.description.slice(0, 100)}${c.description.length > 100 ? '...' : ''}</p>
+                <div class="map-popup-meta">
+                    <div><strong>Category:</strong> ${c.category || 'General'}</div>
+                    <div><strong>Priority:</strong> <span style="color: ${c.priority === 'HIGH' ? '#ef4444' : c.priority === 'MEDIUM' ? '#f59e0b' : '#3b82f6'}; font-weight: bold;">${c.priority}</span></div>
+                    ${tech ? `<div><strong>Technician:</strong> 👤 ${tech.name} (${tech.specialization})</div>` : ''}
+                </div>
+                <div class="map-popup-actions">
+                    <button class="btn btn-primary btn-sm btn-block view-details-btn" style="margin-top: 8px;">
+                        <i class="fa-solid fa-eye"></i> View Full Details
+                    </button>
+                    <a href="https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}" target="_blank" rel="noopener noreferrer" class="map-directions-link">
+                        <i class="fa-solid fa-diamond-turn-right"></i> Navigate (Google Maps)
+                    </a>
+                </div>
+            `;
+
+            // Attach View Details Click Listener
+            const btn = popupContent.querySelector('.view-details-btn');
+            if (btn) {
+                btn.onclick = () => {
+                    if (onOpenDetails) onOpenDetails(c._id);
+                };
+            }
+
+            const marker = L.marker(coords, { icon: customIcon }).bindPopup(popupContent);
+            markersLayer.addLayer(marker);
+        });
+
+        setStats({
+            total: filtered.length,
+            critical: criticalCount,
+            resolved: resolvedCount,
+        });
+
+        // Fit map view to pins if available
+        if (bounds.length > 0 && mapInstanceRef.current) {
+            try {
+                mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            } catch (e) {
+                // Ignore bounds fit if single point
+            }
+        }
+    }, [complaints, selectedCategory, selectedStatus, selectedWard]);
+
+    const getCategoryIcon = (category = '') => {
+        const cat = category.toLowerCase();
+        if (cat.includes('light') || cat.includes('electr')) return 'fa-lightbulb';
+        if (cat.includes('road') || cat.includes('pothole')) return 'fa-road';
+        if (cat.includes('water') || cat.includes('pipe') || cat.includes('sewage')) return 'fa-faucet-drip';
+        if (cat.includes('sanitat') || cat.includes('garbage') || cat.includes('waste')) return 'fa-trash-can';
+        if (cat.includes('health')) return 'fa-heart-pulse';
+        return 'fa-triangle-exclamation';
+    };
+
+    const handleRecenter = () => {
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.setView(DEFAULT_CENTER, 13);
+        }
+    };
+
+    return (
+        <div className="city-map-wrapper">
+            {/* Map Top Control Header & Filters */}
+            <div className="map-controls-panel">
+                <div className="map-filter-group">
+                    <label><i className="fa-solid fa-filter"></i> Category:</label>
+                    <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                        <option value="ALL">All Categories</option>
+                        <option value="Roads">Roads & Potholes</option>
+                        <option value="Streetlights">Streetlights & Electrical</option>
+                        <option value="Water Supply">Water Supply & Pipeline</option>
+                        <option value="Sanitation">Sanitation & Garbage</option>
+                        <option value="Health">Public Health</option>
+                    </select>
+                </div>
+
+                <div className="map-filter-group">
+                    <label><i className="fa-solid fa-sliders"></i> Status:</label>
+                    <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+                        <option value="ALL">All Statuses</option>
+                        <option value="OPEN">Open (New)</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="ESCALATED">Escalated (SLA Breached)</option>
+                        <option value="RESOLVED">Resolved (Fixed)</option>
+                    </select>
+                </div>
+
+                <div className="map-filter-group">
+                    <label><i className="fa-solid fa-location-dot"></i> Ward:</label>
+                    <select value={selectedWard} onChange={(e) => setSelectedWard(e.target.value)}>
+                        <option value="ALL">All Wards</option>
+                        <option value="Ward 1">Ward 1</option>
+                        <option value="Ward 2">Ward 2</option>
+                        <option value="Ward 3">Ward 3</option>
+                        <option value="Ward 4">Ward 4</option>
+                        <option value="Ward 5">Ward 5</option>
+                    </select>
+                </div>
+
+                <button className="btn btn-secondary btn-sm" onClick={handleRecenter} style={{ marginLeft: 'auto' }}>
+                    <i className="fa-solid fa-crosshairs"></i> Recenter City
+                </button>
+            </div>
+
+            {/* Live Stats Floating Cards */}
+            <div className="map-stats-strip">
+                <div className="map-stat-pill">
+                    <span className="stat-dot total"></span>
+                    <span>Total Incidents: <strong>{stats.total}</strong></span>
+                </div>
+                <div className="map-stat-pill">
+                    <span className="stat-dot critical"></span>
+                    <span>Critical / Escalated: <strong>{stats.critical}</strong></span>
+                </div>
+                <div className="map-stat-pill">
+                    <span className="stat-dot resolved"></span>
+                    <span>AI-Verified Resolved: <strong>{stats.resolved}</strong></span>
+                </div>
+            </div>
+
+            {/* Leaflet Map Canvas */}
+            <div className="map-canvas-container" ref={mapContainerRef}></div>
+
+            {/* Map Legend */}
+            <div className="map-legend">
+                <div className="legend-item"><span className="legend-marker red"></span> Critical / High Priority</div>
+                <div className="legend-item"><span className="legend-marker yellow"></span> In Progress (Dispatched)</div>
+                <div className="legend-item"><span className="legend-marker green"></span> AI Resolved & Closed</div>
+            </div>
+        </div>
+    );
+};

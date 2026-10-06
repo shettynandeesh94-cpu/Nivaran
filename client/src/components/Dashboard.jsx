@@ -3,6 +3,7 @@ import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { SmartEngine } from '../utils/smartEngine';
 import { getAssignedTechnician } from '../utils/technicians';
+import { CityMapView } from './CityMapView';
 
 // --- SUB-COMPONENT: REAL-TIME INDIVIDUAL CELL COUNTDOWN TIMER ---
 const SlaCountdownCell = ({ deadline, status }) => {
@@ -385,6 +386,13 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                             onClick={() => switchTab('tab-all-complaints')}
                         >
                             <i className="fa-solid fa-list-check"></i> Complaints Board
+                        </button>
+
+                        <button 
+                            className={`nav-tab-btn ${activeTab === 'tab-map' ? 'active' : ''}`}
+                            onClick={() => switchTab('tab-map')}
+                        >
+                            <i className="fa-solid fa-map-location-dot"></i> City GIS Map
                         </button>
 
                         <button 
@@ -850,6 +858,24 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* View: City GIS Command Map */}
+                    {activeTab === 'tab-map' && (
+                        <div id="tab-map">
+                            <div className="dashboard-header-row">
+                                <div>
+                                    <h2 className="dashboard-title">
+                                        <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--secondary)', marginRight: '10px' }}></i>
+                                        Live City GIS Command Map
+                                    </h2>
+                                    <p className="dashboard-subtitle">
+                                        Interactive spatial command center tracking active grievances, auto-dispatched field technicians, and resolved municipal works.
+                                    </p>
+                                </div>
+                            </div>
+                            <CityMapView complaints={complaints} onOpenDetails={onOpenDetails} />
                         </div>
                     )}
 
