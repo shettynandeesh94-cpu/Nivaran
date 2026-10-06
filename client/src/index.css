@@ -2507,6 +2507,111 @@ h1, h2, h3, h4, h5, h6 {
 .legend-marker.yellow { background: #f59e0b; }
 .legend-marker.green { background: #10b981; }
 
+/* 360 Street View D-Pad Button */
+.dpad-streetview-btn {
+    width: 100%;
+    margin-top: 4px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25));
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    color: #e0e7ff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.dpad-streetview-btn:hover {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
+    transform: translateY(-1px);
+}
+
+/* 360 Street View Modal */
+.streetview-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.streetview-modal-content {
+    background: rgba(15, 20, 32, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-lg);
+    width: 95vw;
+    max-width: 1100px;
+    height: 82vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.2);
+}
+
+.streetview-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.streetview-modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.streetview-modal-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 4px 0 0 0;
+}
+
+.streetview-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.streetview-iframe-container {
+    flex: 1;
+    width: 100%;
+    background: #000;
+    position: relative;
+}
+
+.streetview-hint {
+    padding: 10px 20px;
+    background: rgba(11, 15, 25, 0.9);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 
 
 

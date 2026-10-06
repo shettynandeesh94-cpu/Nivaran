@@ -31,6 +31,7 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
     const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [selectedWard, setSelectedWard] = useState('ALL');
     const [stats, setStats] = useState({ total: 0, critical: 0, resolved: 0 });
+    const [streetViewData, setStreetViewData] = useState(null);
 
     // Derive coordinates for a complaint (uses actual GPS or pseudo-deterministic ward coordinates)
     const getCoordinatesForComplaint = (c, index) => {
@@ -110,6 +111,17 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
             const markersLayer = L.layerGroup().addTo(map);
             mapInstanceRef.current = map;
             markersLayerRef.current = markersLayer;
+
+            // Allow clicking anywhere on the map to open 360° Street View
+            map.on('contextmenu', (e) => {
+                const { lat, lng } = e.latlng;
+                setStreetViewData({
+                    lat,
+                    lng,
+                    title: `Road Inspection Point`,
+                    ward: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+                });
+            });
 
             setTimeout(() => {
                 map.invalidateSize();
@@ -258,6 +270,9 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                     <button class="btn btn-primary btn-sm btn-block view-details-btn" style="margin-top: 8px;">
                         <i class="fa-solid fa-eye"></i> View Full Details
                     </button>
+                    <button class="btn btn-secondary btn-sm btn-block streetview-btn" style="margin-top: 6px; background: rgba(99, 102, 241, 0.18); border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; font-weight: 600;">
+                        <i class="fa-solid fa-person-walking"></i> 🚶 360° Street View (Road)
+                    </button>
                     <a href="https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}" target="_blank" rel="noopener noreferrer" class="map-directions-link">
                         <i class="fa-solid fa-diamond-turn-right"></i> Navigate (Google Maps)
                     </a>
@@ -269,6 +284,19 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
             if (btn) {
                 btn.onclick = () => {
                     if (onOpenDetails) onOpenDetails(c._id);
+                };
+            }
+
+            // Attach 360 Street View Click Listener
+            const svBtn = popupContent.querySelector('.streetview-btn');
+            if (svBtn) {
+                svBtn.onclick = () => {
+                    setStreetViewData({
+                        lat: coords[0],
+                        lng: coords[1],
+                        title: c.title,
+                        ward: c.ward
+                    });
                 };
             }
 
@@ -469,6 +497,26 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                             <i className="fa-solid fa-minus"></i> Zoom Out
                         </button>
                     </div>
+
+                    {/* 360 Street View Launcher */}
+                    <button 
+                        type="button"
+                        className="dpad-streetview-btn"
+                        onClick={() => {
+                            if (mapInstanceRef.current) {
+                                const center = mapInstanceRef.current.getCenter();
+                                setStreetViewData({
+                                    lat: center.lat,
+                                    lng: center.lng,
+                                    title: 'Live Road Inspection Point',
+                                    ward: 'City Center'
+                                });
+                            }
+                        }}
+                        title="Open 360° Road & Street View at Center"
+                    >
+                        <i className="fa-solid fa-person-walking"></i> 🚶 360° Road View
+                    </button>
                 </div>
             </div>
 
@@ -478,6 +526,55 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 <div className="legend-item"><span className="legend-marker yellow"></span> In Progress (Dispatched)</div>
                 <div className="legend-item"><span className="legend-marker green"></span> AI Resolved & Closed</div>
             </div>
+
+            {/* 360° Street Level Road View Modal */}
+            {streetViewData && (
+                <div className="streetview-modal-backdrop" onClick={() => setStreetViewData(null)}>
+                    <div className="streetview-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="streetview-modal-header">
+                            <div>
+                                <h3 className="streetview-modal-title">
+                                    <i className="fa-solid fa-person-walking"></i> 360° Street & Road View Explorer
+                                </h3>
+                                <p className="streetview-modal-subtitle">
+                                    {streetViewData.title} &bull; {streetViewData.ward} ({streetViewData.lat.toFixed(5)}°, {streetViewData.lng.toFixed(5)}°)
+                                </p>
+                            </div>
+                            <div className="streetview-modal-actions">
+                                <a 
+                                    href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${streetViewData.lat},${streetViewData.lng}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="btn btn-primary btn-sm"
+                                    title="Open Fullscreen in Google Maps Street View"
+                                >
+                                    <i className="fa-solid fa-arrow-up-right-from-square"></i> Open Google Maps Street View
+                                </a>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setStreetViewData(null)}>
+                                    <i className="fa-solid fa-xmark"></i> Close
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Interactive 360 Panorama Iframe */}
+                        <div className="streetview-iframe-container">
+                            <iframe
+                                title="360 Street View Panorama"
+                                src={`https://maps.google.com/maps?q=&layer=c&cbll=${streetViewData.lat},${streetViewData.lng}&cbp=11,0,0,0,0&output=svembed`}
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                allowFullScreen
+                                loading="lazy"
+                            ></iframe>
+                        </div>
+
+                        <div className="streetview-hint">
+                            <span><i className="fa-solid fa-hand-pointer"></i> <strong>How to navigate:</strong> Click and drag to look around in 360°. Click the road arrows to move down the street!</span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
