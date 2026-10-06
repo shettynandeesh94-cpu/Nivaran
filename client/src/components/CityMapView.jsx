@@ -46,16 +46,20 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 zoomControl: true,
             });
 
-            // CartoDB Dark Matter tile layer for premium dark command-center aesthetic
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
+            // Standard Free OpenStreetMap tile layer (No API key required)
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             }).addTo(map);
 
             const markersLayer = L.layerGroup().addTo(map);
             mapInstanceRef.current = map;
             markersLayerRef.current = markersLayer;
+
+            // Trigger size calculation for clean container render
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
         }
 
         return () => {
