@@ -527,50 +527,103 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 <div className="legend-item"><span className="legend-marker green"></span> AI Resolved & Closed</div>
             </div>
 
-            {/* 360° Street Level Road View Modal */}
+            {/* 360° Street Level & Road View Modal */}
             {streetViewData && (
                 <div className="streetview-modal-backdrop" onClick={() => setStreetViewData(null)}>
                     <div className="streetview-modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="streetview-modal-header">
                             <div>
                                 <h3 className="streetview-modal-title">
-                                    <i className="fa-solid fa-person-walking"></i> 360° Street & Road View Explorer
+                                    <i className="fa-solid fa-road"></i> Interactive Road & Street Level Explorer
                                 </h3>
                                 <p className="streetview-modal-subtitle">
                                     {streetViewData.title} &bull; {streetViewData.ward} ({streetViewData.lat.toFixed(5)}°, {streetViewData.lng.toFixed(5)}°)
                                 </p>
                             </div>
                             <div className="streetview-modal-actions">
+                                <div className="modal-view-mode-tabs">
+                                    <button 
+                                        type="button" 
+                                        className={`modal-tab-btn ${(streetViewData.mode || 'satellite') === 'satellite' ? 'active' : ''}`}
+                                        onClick={() => setStreetViewData(prev => ({ ...prev, mode: 'satellite' }))}
+                                    >
+                                        <i className="fa-solid fa-satellite"></i> 🛰️ 3D Satellite
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`modal-tab-btn ${streetViewData.mode === 'streetview' ? 'active' : ''}`}
+                                        onClick={() => setStreetViewData(prev => ({ ...prev, mode: 'streetview' }))}
+                                    >
+                                        <i className="fa-solid fa-person-walking"></i> 🚶 360° Pano
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`modal-tab-btn ${streetViewData.mode === 'roadmap' ? 'active' : ''}`}
+                                        onClick={() => setStreetViewData(prev => ({ ...prev, mode: 'roadmap' }))}
+                                    >
+                                        <i className="fa-solid fa-map"></i> 🗺️ Road Map
+                                    </button>
+                                </div>
+
                                 <a 
-                                    href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${streetViewData.lat},${streetViewData.lng}`} 
+                                    href={`https://www.google.com/maps/search/?api=1&query=${streetViewData.lat},${streetViewData.lng}`} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
                                     className="btn btn-primary btn-sm"
-                                    title="Open Fullscreen in Google Maps Street View"
+                                    title="Open Fullscreen in Google Maps"
                                 >
-                                    <i className="fa-solid fa-arrow-up-right-from-square"></i> Open Google Maps Street View
+                                    <i className="fa-solid fa-arrow-up-right-from-square"></i> Open in Google Maps
                                 </a>
                                 <button className="btn btn-secondary btn-sm" onClick={() => setStreetViewData(null)}>
-                                    <i className="fa-solid fa-xmark"></i> Close
+                                    <i className="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
                         </div>
 
-                        {/* Interactive 360 Panorama Iframe */}
+                        {/* Interactive Panorama / Satellite Iframe */}
                         <div className="streetview-iframe-container">
-                            <iframe
-                                title="360 Street View Panorama"
-                                src={`https://maps.google.com/maps?q=&layer=c&cbll=${streetViewData.lat},${streetViewData.lng}&cbp=11,0,0,0,0&output=svembed`}
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                allowFullScreen
-                                loading="lazy"
-                            ></iframe>
+                            {streetViewData.mode === 'streetview' ? (
+                                <iframe
+                                    title="360 Street View Panorama"
+                                    src={`https://maps.google.com/maps?q=&layer=c&cbll=${streetViewData.lat},${streetViewData.lng}&cbp=11,0,0,0,0&output=svembed`}
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                ></iframe>
+                            ) : streetViewData.mode === 'roadmap' ? (
+                                <iframe
+                                    title="Roadmap View"
+                                    src={`https://maps.google.com/maps?q=${streetViewData.lat},${streetViewData.lng}&t=m&z=18&ie=UTF8&iwloc=&output=embed`}
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                ></iframe>
+                            ) : (
+                                <iframe
+                                    title="Ultra-HD 3D Satellite Road View"
+                                    src={`https://maps.google.com/maps?q=${streetViewData.lat},${streetViewData.lng}&t=k&z=19&ie=UTF8&iwloc=&output=embed`}
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                ></iframe>
+                            )}
                         </div>
 
                         <div className="streetview-hint">
-                            <span><i className="fa-solid fa-hand-pointer"></i> <strong>How to navigate:</strong> Click and drag to look around in 360°. Click the road arrows to move down the street!</span>
+                            <span>
+                                <i className="fa-solid fa-circle-info"></i> 
+                                {(streetViewData.mode || 'satellite') === 'satellite' 
+                                    ? 'Ultra-HD Satellite view: Zoom right down to the pavement, cars, and building roofs.' 
+                                    : streetViewData.mode === 'streetview' 
+                                    ? '360° Ground Level: If Google car panoramic coverage is not recorded for this specific coordinate, switch to 🛰️ 3D Satellite tab.' 
+                                    : 'Detailed street layout with turn-by-turn road names and junctions.'}
+                            </span>
                         </div>
                     </div>
                 </div>
