@@ -23,7 +23,10 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markersLayerRef = useRef(null);
+    const baseTileLayerRef = useRef(null);
+    const overlayTileLayerRef = useRef(null);
 
+    const [mapStyle, setMapStyle] = useState('satellite'); // 'satellite' | 'streets' | 'terrain'
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [selectedWard, setSelectedWard] = useState('ALL');
@@ -41,6 +44,56 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
         return [base[0] + radius * Math.cos(angle), base[1] + radius * Math.sin(angle)];
     };
 
+    // Helper to apply the active tile layers
+    const applyMapTiles = (map, style) => {
+        if (baseTileLayerRef.current) {
+            map.removeLayer(baseTileLayerRef.current);
+            baseTileLayerRef.current = null;
+        }
+        if (overlayTileLayerRef.current) {
+            map.removeLayer(overlayTileLayerRef.current);
+            overlayTileLayerRef.current = null;
+        }
+
+        if (style === 'satellite') {
+            // High-resolution Satellite Base Imagery
+            baseTileLayerRef.current = L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics',
+                }
+            ).addTo(map);
+
+            // Satellite Hybrid Overlay (Roads, Landmark Names, Borders)
+            overlayTileLayerRef.current = L.tileLayer(
+                'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+                {
+                    maxZoom: 19,
+                    pane: 'overlayPane',
+                }
+            ).addTo(map);
+        } else if (style === 'terrain') {
+            // Topographic Terrain View
+            baseTileLayerRef.current = L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+                {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri &mdash; USGS, NOAA',
+                }
+            ).addTo(map);
+        } else {
+            // OpenStreetMap Standard Streets
+            baseTileLayerRef.current = L.tileLayer(
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                }
+            ).addTo(map);
+        }
+    };
+
     // Initialize Leaflet Map
     useEffect(() => {
         if (!mapContainerRef.current) return;
@@ -48,21 +101,16 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
         if (!mapInstanceRef.current) {
             const map = L.map(mapContainerRef.current, {
                 center: DEFAULT_CENTER,
-                zoom: 13,
+                zoom: 14,
                 zoomControl: true,
             });
 
-            // Standard Free OpenStreetMap tile layer (No API key required)
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            }).addTo(map);
+            applyMapTiles(map, mapStyle);
 
             const markersLayer = L.layerGroup().addTo(map);
             mapInstanceRef.current = map;
             markersLayerRef.current = markersLayer;
 
-            // Trigger size calculation for clean container render
             setTimeout(() => {
                 map.invalidateSize();
             }, 200);
@@ -75,6 +123,13 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
             }
         };
     }, []);
+
+    // Update Tile Layer when Map Style changes
+    useEffect(() => {
+        if (mapInstanceRef.current) {
+            applyMapTiles(mapInstanceRef.current, mapStyle);
+        }
+    }, [mapStyle]);
 
     // Update Markers when complaints or filters change
     useEffect(() => {
@@ -207,6 +262,34 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
         <div className="city-map-wrapper">
             {/* Map Top Control Header & Filters */}
             <div className="map-controls-panel">
+                {/* Map Layer Style Switcher */}
+                <div className="map-style-toggle-group">
+                    <button 
+                        type="button"
+                        className={`map-style-btn ${mapStyle === 'satellite' ? 'active' : ''}`}
+                        onClick={() => setMapStyle('satellite')}
+                        title="High-resolution Satellite Hybrid View"
+                    >
+                        <i className="fa-solid fa-satellite"></i> 🛰️ Satellite
+                    </button>
+                    <button 
+                        type="button"
+                        className={`map-style-btn ${mapStyle === 'streets' ? 'active' : ''}`}
+                        onClick={() => setMapStyle('streets')}
+                        title="Standard OpenStreetMap Streets"
+                    >
+                        <i className="fa-solid fa-map"></i> 🗺️ Streets
+                    </button>
+                    <button 
+                        type="button"
+                        className={`map-style-btn ${mapStyle === 'terrain' ? 'active' : ''}`}
+                        onClick={() => setMapStyle('terrain')}
+                        title="Topographic Terrain View"
+                    >
+                        <i className="fa-solid fa-mountain-sun"></i> ⛰️ Terrain
+                    </button>
+                </div>
+
                 <div className="map-filter-group">
                     <label><i className="fa-solid fa-filter"></i> Category:</label>
                     <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
@@ -243,7 +326,7 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 </div>
 
                 <button className="btn btn-secondary btn-sm" onClick={handleRecenter} style={{ marginLeft: 'auto' }}>
-                    <i className="fa-solid fa-crosshairs"></i> Recenter City
+                    <i className="fa-solid fa-crosshairs"></i> Recenter
                 </button>
             </div>
 
