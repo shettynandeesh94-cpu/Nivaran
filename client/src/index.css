@@ -2205,13 +2205,140 @@ h1, h2, h3, h4, h5, h6 {
 .stat-dot.critical { background: #ef4444; }
 .stat-dot.resolved { background: #10b981; }
 
+.map-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
 .map-canvas-container {
     width: 100%;
-    height: 540px;
+    height: 560px;
     border-radius: var(--radius-md);
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 10;
+    z-index: 1;
+}
+
+/* Floating Pan Radar & D-Pad HUD Widget */
+.map-dpad-controller {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1000;
+    background: rgba(11, 15, 25, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 15px rgba(99, 102, 241, 0.15);
+    user-select: none;
+}
+
+.dpad-header {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--secondary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 2px;
+}
+
+.dpad-cross {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.dpad-middle-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dpad-btn {
+    width: 34px;
+    height: 34px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dpad-btn:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(168, 85, 247, 0.5));
+    border-color: rgba(168, 85, 247, 0.6);
+    color: #ffffff;
+    transform: scale(1.08);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+.dpad-btn:active {
+    transform: scale(0.95);
+    background: #6366f1;
+}
+
+.dpad-btn.dpad-center {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: var(--secondary);
+    font-size: 0.95rem;
+}
+
+.dpad-btn.dpad-center:hover {
+    background: #6366f1;
+    color: #ffffff;
+}
+
+.dpad-zoom-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dpad-zoom-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 5px 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.dpad-zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    border-color: var(--secondary);
+}
+
+.dpad-zoom-btn:active {
+    transform: scale(0.96);
 }
 
 /* Custom DivIcon Pin */

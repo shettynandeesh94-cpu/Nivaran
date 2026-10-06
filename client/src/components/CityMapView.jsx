@@ -131,6 +131,56 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
         }
     }, [mapStyle]);
 
+    // Pan and Zoom Controller Helpers
+    const handlePan = (dx, dy) => {
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.panBy([dx, dy], { animate: true, duration: 0.35 });
+        }
+    };
+
+    const handleZoomIn = () => {
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.zoomIn();
+        }
+    };
+
+    const handleZoomOut = () => {
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.zoomOut();
+        }
+    };
+
+    // Keyboard Arrow Keys Navigation Listener
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (!mapInstanceRef.current) return;
+            // Ignore if user is typing in an input or select
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+            const PAN_STEP = 150;
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                e.preventDefault();
+                mapInstanceRef.current.panBy([0, -PAN_STEP], { animate: true });
+            } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                mapInstanceRef.current.panBy([0, PAN_STEP], { animate: true });
+            } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                mapInstanceRef.current.panBy([-PAN_STEP, 0], { animate: true });
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                mapInstanceRef.current.panBy([PAN_STEP, 0], { animate: true });
+            } else if (e.key === '+' || e.key === '=') {
+                mapInstanceRef.current.zoomIn();
+            } else if (e.key === '-' || e.key === '_') {
+                mapInstanceRef.current.zoomOut();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     // Update Markers when complaints or filters change
     useEffect(() => {
         if (!mapInstanceRef.current || !markersLayerRef.current) return;
@@ -346,8 +396,81 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 </div>
             </div>
 
-            {/* Leaflet Map Canvas */}
-            <div className="map-canvas-container" ref={mapContainerRef}></div>
+            {/* Leaflet Map Canvas with Floating Pan D-Pad Controller */}
+            <div className="map-canvas-wrapper">
+                <div className="map-canvas-container" ref={mapContainerRef}></div>
+
+                {/* Floating HUD D-Pad Pan & Navigation Controller */}
+                <div className="map-dpad-controller">
+                    <div className="dpad-header">
+                        <i className="fa-solid fa-compass"></i> PAN CONTROLS
+                    </div>
+                    <div className="dpad-cross">
+                        <button 
+                            type="button" 
+                            className="dpad-btn dpad-up" 
+                            onClick={() => handlePan(0, -180)}
+                            title="Pan Up / North [↑ / W]"
+                        >
+                            <i className="fa-solid fa-arrow-up"></i>
+                        </button>
+                        <div className="dpad-middle-row">
+                            <button 
+                                type="button" 
+                                className="dpad-btn dpad-left" 
+                                onClick={() => handlePan(-180, 0)}
+                                title="Pan Left / West [← / A]"
+                            >
+                                <i className="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <button 
+                                type="button" 
+                                className="dpad-btn dpad-center" 
+                                onClick={handleRecenter}
+                                title="Recenter on City Center"
+                            >
+                                <i className="fa-solid fa-location-crosshairs"></i>
+                            </button>
+                            <button 
+                                type="button" 
+                                className="dpad-btn dpad-right" 
+                                onClick={() => handlePan(180, 0)}
+                                title="Pan Right / East [→ / D]"
+                            >
+                                <i className="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <button 
+                            type="button" 
+                            className="dpad-btn dpad-down" 
+                            onClick={() => handlePan(0, 180)}
+                            title="Pan Down / South [↓ / S]"
+                        >
+                            <i className="fa-solid fa-arrow-down"></i>
+                        </button>
+                    </div>
+
+                    {/* Quick Zoom Buttons */}
+                    <div className="dpad-zoom-row">
+                        <button 
+                            type="button" 
+                            className="dpad-zoom-btn" 
+                            onClick={handleZoomIn}
+                            title="Zoom In [+]"
+                        >
+                            <i className="fa-solid fa-plus"></i> Zoom In
+                        </button>
+                        <button 
+                            type="button" 
+                            className="dpad-zoom-btn" 
+                            onClick={handleZoomOut}
+                            title="Zoom Out [-]"
+                        >
+                            <i className="fa-solid fa-minus"></i> Zoom Out
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             {/* Map Legend */}
             <div className="map-legend">
