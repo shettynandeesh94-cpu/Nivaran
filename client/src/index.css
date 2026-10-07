@@ -3404,10 +3404,27 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- MOBILE APP-LIKE BEHAVIOR & TOUCH LOCKING --- */
 html, body {
-    touch-action: pan-y;
-    -webkit-touch-callout: none;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: none;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6, 
+.hero-title, .dashboard-title, .section-title, .modal-header h3 {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+.dashboard-section, .landing-section, .navbar, .nav-container, .dashboard-layout, .dashboard-main, .content-panel {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 input, textarea, select {
