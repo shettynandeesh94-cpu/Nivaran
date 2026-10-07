@@ -79,13 +79,34 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [isDetectingGps, setIsDetectingGps] = useState(false);
 
     // High-Precision GPS Geotagging with Multi-Tier Fallback (GPS -> Cellular/WiFi)
-    const triggerGpsAutoDetect = (overrideWard = false) => {
+    const triggerGpsAutoDetect = async (overrideWard = false, source = 'manual') => {
         if (!navigator.geolocation) {
-            showToast('Geolocation is not supported by your browser.', 'warning');
+            showToast('⚠️ Geolocation is not supported by your browser.', 'warning');
             return;
         }
         setIsDetectingGps(true);
-        showToast('📍 Finding exact GPS location...', 'info');
+
+        // Check permission status if Permissions API is supported
+        if (navigator.permissions && navigator.permissions.query) {
+            try {
+                const status = await navigator.permissions.query({ name: 'geolocation' });
+                if (status.state === 'denied') {
+                    showToast('🔒 Location access blocked. Tap the 🔒 lock icon in your browser URL bar to Allow Location, and ensure phone GPS is ON.', 'error');
+                    setIsDetectingGps(false);
+                    return;
+                } else if (status.state === 'prompt') {
+                    showToast('📍 Please tap "Allow" when your browser asks for Location Permission!', 'info');
+                }
+            } catch (e) {
+                // Ignore permissions query failure on older mobile webviews
+            }
+        }
+
+        if (source === 'camera') {
+            showToast('📍 Getting GPS location for camera photo... Please ensure phone GPS is ON!', 'info');
+        } else {
+            showToast('📍 Finding exact GPS location... Please ensure phone GPS is ON!', 'info');
+        }
 
         const onLocationSuccess = async (pos) => {
             const { latitude, longitude, accuracy } = pos.coords;
@@ -128,7 +149,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                 address: address || `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`
             });
 
-            showToast(`📍 Location Geotagged (±${Math.round(accuracy || 5)}m)`, 'success');
+            showToast(`📍 Exact Location Geotagged (±${Math.round(accuracy || 5)}m)`, 'success');
             setIsDetectingGps(false);
         };
 
@@ -144,9 +165,14 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                         console.warn('Geolocation failed completely:', fallbackErr.message);
                         setIsDetectingGps(false);
                         if (fallbackErr.code === 1) {
-                            showToast('🔒 Location blocked. Tap 🔒 in your browser URL bar to Allow Location access.', 'error');
+                            // PERMISSION_DENIED
+                            showToast('🔒 Location blocked. Please tap the 🔒 lock icon in your browser URL bar and choose "Allow Location".', 'error');
+                        } else if (fallbackErr.code === 2) {
+                            // POSITION_UNAVAILABLE (GPS turned off on phone)
+                            showToast('📍 Device GPS is turned OFF! Please pull down your phone notification bar, turn ON Location/GPS, and tap "Auto-Detect GPS".', 'warning');
                         } else {
-                            showToast('📍 Turn ON Device Location/GPS in your phone notification shade and try again.', 'warning');
+                            // TIMEOUT
+                            showToast('⏱️ Location timed out. Please turn ON phone Location/GPS and tap "Auto-Detect GPS".', 'warning');
                         }
                     },
                     { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
@@ -705,20 +731,28 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                     onChange={handleImageFileChange}
                                                     style={{ display: 'none' }}
                                                 />
+                                                
+                                                <div className="camera-location-tip">
+                                                    <i className="fa-solid fa-location-dot"></i>
+                                                    <span>
+                                                        <strong>GPS Geotagging:</strong> Turn <strong>ON</strong> your phone's <strong>Location / GPS</strong> when tapping Camera so this issue is mapped to the exact spot.
+                                                    </span>
+                                                </div>
+
                                                 <div className="camera-choice-grid">
                                                     <label 
                                                         htmlFor="complaint-camera" 
                                                         className="camera-action-btn camera-snap-btn"
-                                                        onClick={() => triggerGpsAutoDetect(true)}
+                                                        onClick={() => triggerGpsAutoDetect(true, 'camera')}
                                                     >
                                                         <i className="fa-solid fa-camera"></i>
                                                         <span>Take Live Photo (Camera)</span>
-                                                        <small>Auto-geotags your exact location</small>
+                                                        <small>Prompts for GPS & exact spot</small>
                                                     </label>
                                                     <label 
                                                         htmlFor="complaint-gallery" 
                                                         className="camera-action-btn gallery-pick-btn"
-                                                        onClick={() => triggerGpsAutoDetect(true)}
+                                                        onClick={() => triggerGpsAutoDetect(true, 'gallery')}
                                                     >
                                                         <i className="fa-solid fa-images"></i>
                                                         <span>Choose from Gallery</span>
@@ -743,7 +777,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                     </div>
                                                     
                                                     {/* Geotag Indicator Card */}
-                                                    {locationData && (
+                                                    {locationData ? (
                                                         <div className="geotag-status-card">
                                                             <div className="geotag-status-header">
                                                                 <div className="geotag-pulse-indicator">
@@ -760,6 +794,26 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                             <div className="geotag-address-text">
                                                                 <i className="fa-solid fa-map-pin"></i> {locationData.address}
                                                             </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="geotag-missing-card">
+                                                            <div className="geotag-missing-header">
+                                                                <i className="fa-solid fa-triangle-exclamation" style={{ color: '#f59e0b', fontSize: '1.2rem' }}></i>
+                                                                <div>
+                                                                    <strong>GPS Location Not Captured Yet</strong>
+                                                                    <p>Turn ON phone GPS & tap below to map this complaint to the exact street.</p>
+                                                                </div>
+                                                            </div>
+                                                            <button 
+                                                                type="button" 
+                                                                className="btn btn-secondary btn-sm btn-block"
+                                                                onClick={() => triggerGpsAutoDetect(true, 'manual')}
+                                                                disabled={isDetectingGps}
+                                                                style={{ marginTop: '8px' }}
+                                                            >
+                                                                <i className={`fa-solid ${isDetectingGps ? 'fa-spinner fa-spin' : 'fa-location-crosshairs'}`}></i>
+                                                                {isDetectingGps ? ' Locating GPS Coordinates...' : ' 📍 Turn ON Location / Geotag Now'}
+                                                            </button>
                                                         </div>
                                                     )}
 
