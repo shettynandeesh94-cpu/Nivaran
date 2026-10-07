@@ -15,19 +15,47 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Serve static frontend files
-app.use(express.static(path.join(__dirname, '../client/dist')));
+const fs = require('fs');
+
+const clientDistPath = path.join(__dirname, '../client/dist');
+const indexHtmlPath = path.join(clientDistPath, 'index.html');
+
+// Serve static frontend files if built together
+if (fs.existsSync(clientDistPath)) {
+    app.use(express.static(clientDistPath));
+}
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/budget', budgetRoutes);
 
-// SPA fallback route (serve index.html for non-api routes)
+// Root route handler
+app.get('/', (req, res) => {
+    if (fs.existsSync(indexHtmlPath)) {
+        return res.sendFile(indexHtmlPath);
+    }
+    res.json({
+        name: 'Nivaran Smart Civic Redressal API',
+        status: 'online',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'in-memory/offline',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// SPA fallback route (serve index.html for non-api routes if frontend is present)
 app.get(/.*/, (req, res, next) => {
     if (req.path.startsWith('/api')) {
         return next();
     }
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    if (fs.existsSync(indexHtmlPath)) {
+        return res.sendFile(indexHtmlPath);
+    }
+    res.status(404).json({ error: 'Endpoint not found on Nivaran API' });
 });
 
 async function startServer() {
