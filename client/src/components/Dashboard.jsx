@@ -485,7 +485,9 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                 <h3 className="panel-title">
                                     {user?.role === 'citizen' ? 'My Recent Submissions' : 'Recent Ward Grievances'}
                                 </h3>
-                                <div className="table-container">
+                                
+                                {/* Desktop Table View */}
+                                <div className="desktop-table-container table-container">
                                     <table className="complaint-table">
                                         <thead>
                                             <tr>
@@ -542,6 +544,37 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                             )}
                                         </tbody>
                                     </table>
+                                </div>
+
+                                {/* Mobile Complaints Card List */}
+                                <div className="mobile-complaints-cards">
+                                    {complaints.length === 0 ? (
+                                        <div className="mobile-empty-card text-muted text-center">No complaints found.</div>
+                                    ) : (
+                                        complaints.slice(0, 5).map(c => (
+                                            <div key={c._id} className="mobile-complaint-card" onClick={() => onOpenDetails(c._id)}>
+                                                <div className="mobile-card-header">
+                                                    <span className="ward-tag">
+                                                        <i className="fa-solid fa-folder"></i> {c.category || 'General'}
+                                                    </span>
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                        <span className={`badge ${getPriorityClass(c.priority)}`}>{c.priority}</span>
+                                                        <span className={`badge ${getStatusClass(c.status)}`}>{c.status}</span>
+                                                    </div>
+                                                </div>
+                                                <h4 className="mobile-card-title">{c.title}</h4>
+                                                <p className="mobile-card-desc">{c.description}</p>
+                                                <div className="mobile-card-footer">
+                                                    <span className="mobile-card-ward">
+                                                        <i className="fa-solid fa-location-dot"></i> {c.ward}
+                                                    </span>
+                                                    <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); onOpenDetails(c._id); }}>
+                                                        View <i className="fa-solid fa-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -860,7 +893,8 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
 
                             {/* Board Table */}
                             <div className="content-panel" style={{ marginTop: '20px' }}>
-                                <div className="table-container">
+                                {/* Desktop Table View */}
+                                <div className="desktop-table-container table-container">
                                     <table className="complaint-table">
                                         <thead>
                                             <tr>
@@ -917,6 +951,37 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                             )}
                                         </tbody>
                                     </table>
+                                </div>
+
+                                {/* Mobile Complaints Card List */}
+                                <div className="mobile-complaints-cards">
+                                    {filteredComplaints.length === 0 ? (
+                                        <div className="mobile-empty-card text-muted text-center">No complaints match current filters.</div>
+                                    ) : (
+                                        filteredComplaints.map(c => (
+                                            <div key={c._id} className="mobile-complaint-card" onClick={() => onOpenDetails(c._id)}>
+                                                <div className="mobile-card-header">
+                                                    <span className="ward-tag">
+                                                        <i className="fa-solid fa-folder"></i> {c.category || 'General'}
+                                                    </span>
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                        <span className={`badge ${getPriorityClass(c.priority)}`}>{c.priority}</span>
+                                                        <span className={`badge ${getStatusClass(c.status)}`}>{c.status}</span>
+                                                    </div>
+                                                </div>
+                                                <h4 className="mobile-card-title">{c.title}</h4>
+                                                <p className="mobile-card-desc">{c.description}</p>
+                                                <div className="mobile-card-footer">
+                                                    <span className="mobile-card-ward">
+                                                        <i className="fa-solid fa-location-dot"></i> {c.ward}
+                                                    </span>
+                                                    <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); onOpenDetails(c._id); }}>
+                                                        View <i className="fa-solid fa-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1135,6 +1200,58 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                     
                 </div>
             </div>
+
+            {/* Fixed Mobile Bottom App Navigation Bar */}
+            <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+                <button 
+                    type="button"
+                    className={`mobile-nav-item ${activeTab === 'tab-overview' ? 'active' : ''}`}
+                    onClick={() => { switchTab('tab-overview'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                    <i className="fa-solid fa-chart-pie"></i>
+                    <span>Overview</span>
+                </button>
+                
+                {user?.role === 'citizen' && (
+                    <button 
+                        type="button"
+                        className={`mobile-nav-item mobile-nav-highlight ${activeTab === 'tab-new-complaint' ? 'active' : ''}`}
+                        onClick={() => { switchTab('tab-new-complaint'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    >
+                        <div className="mobile-nav-circle">
+                            <i className="fa-solid fa-plus"></i>
+                        </div>
+                        <span>File Issue</span>
+                    </button>
+                )}
+                
+                <button 
+                    type="button"
+                    className={`mobile-nav-item ${activeTab === 'tab-all-complaints' ? 'active' : ''}`}
+                    onClick={() => { switchTab('tab-all-complaints'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                    <i className="fa-solid fa-list-check"></i>
+                    <span>Board</span>
+                </button>
+
+                <button 
+                    type="button"
+                    className={`mobile-nav-item ${activeTab === 'tab-map' ? 'active' : ''}`}
+                    onClick={() => { switchTab('tab-map'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                    <i className="fa-solid fa-map-location-dot"></i>
+                    <span>GIS Map</span>
+                </button>
+
+                <button 
+                    type="button"
+                    className={`mobile-nav-item ${activeTab === 'tab-budget' ? 'active' : ''}`}
+                    onClick={() => { switchTab('tab-budget'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                    <i className="fa-solid fa-coins"></i>
+                    <span>Budgets</span>
+                </button>
+            </nav>
         </section>
     );
 };
