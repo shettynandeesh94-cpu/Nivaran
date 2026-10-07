@@ -1,6 +1,10 @@
 // React API Client Wrapper for Nivaran
 
-const BASE_URL = '/api';
+const BASE_URL = import.meta.env.VITE_API_URL 
+    ? (import.meta.env.VITE_API_URL.endsWith('/api') 
+        ? import.meta.env.VITE_API_URL 
+        : `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`)
+    : '/api';
 
 const getToken = () => localStorage.getItem('nivaran_token');
 const setToken = (token) => localStorage.setItem('nivaran_token', token);

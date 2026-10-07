@@ -240,6 +240,39 @@ h1, h2, h3, h4, h5, h6 {
     gap: 20px;
 }
 
+.mobile-nav-toggle {
+    display: none;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.mobile-nav-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mobile-nav-backdrop {
+    display: none;
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 98;
+}
+
 .nav-link {
     font-size: 0.95rem;
     color: var(--text-secondary);
@@ -271,6 +304,13 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 30px;
     font-size: 0.9rem;
     color: var(--text-secondary);
+}
+
+.nav-user-name {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .role-badge {
@@ -1598,52 +1638,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 15px;
 }
 
-/* --- RESPONSIVE MEDIA QUERIES --- */
-@media (max-width: 1024px) {
-    .dashboard-layout {
-        grid-template-columns: 1fr;
-    }
-    
-    .stats-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .form-container-grid, .modal-body-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .hero-title {
-        font-size: 2.6rem;
-    }
-    
-    .landing-stats, .features-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .navbar {
-        padding: 0 16px;
-    }
-    
-    .nav-container {
-        padding: 0;
-    }
-    
-    .filters-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .btn-lg {
-        padding: 12px 24px;
-        font-size: 1rem;
-    }
-
-    .modal-card {
-        padding: 30px 20px;
-    }
-}
-
 /* ==========================================================================
    VISION AI & AUTONOMOUS INTAKE STYLES
    ========================================================================== */
@@ -2811,6 +2805,599 @@ h1, h2, h3, h4, h5, h6 {
     gap: 8px;
 }
 
+/* ==========================================================================
+   COMPREHENSIVE RESPONSIVE DESIGN SYSTEM (MOBILE & TABLET)
+   ========================================================================== */
 
+/* --- TABLETS & SMALL LAPTOPS (<= 1024px) --- */
+@media (max-width: 1024px) {
+    /* Main Layout */
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
 
+    /* Horizontal Compact Sidebar Navigation */
+    .sidebar {
+        padding: 16px;
+        gap: 16px;
+    }
 
+    .profile-panel {
+        flex-direction: row;
+        text-align: left;
+        padding-bottom: 12px;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .avatar-glow {
+        width: 46px;
+        height: 46px;
+        font-size: 1.3rem;
+        flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 6px;
+        gap: 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.35);
+        border-radius: 4px;
+    }
+
+    .nav-tab-btn {
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 10px 14px;
+        font-size: 0.88rem;
+        border-radius: var(--radius-sm);
+    }
+
+    /* Forms & Grids */
+    .form-container-grid,
+    .modal-body-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .filters-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    /* Map on Tablets */
+    .map-canvas-container {
+        height: 440px;
+    }
+}
+
+/* --- MOBILE PHONES & COMPACT SCREENS (<= 768px) --- */
+@media (max-width: 768px) {
+    /* Touch target optimizations & iOS Safari input zoom prevention */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
+    .btn, .nav-tab-btn, select, input, button {
+        touch-action: manipulation;
+    }
+
+    /* Navbar Mobile Drawer */
+    .navbar {
+        height: 64px;
+        padding: 0 16px;
+    }
+
+    .nav-container {
+        padding: 0;
+    }
+
+    .mobile-nav-toggle {
+        display: flex;
+    }
+
+    .mobile-nav-backdrop {
+        display: block;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: rgba(6, 9, 19, 0.98);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border-color);
+        padding: 20px 20px 26px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        z-index: 99;
+        transform: translateY(-130%);
+        opacity: 0;
+        visibility: hidden;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0.3s ease;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .nav-menu.open {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .nav-group-logged-out {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .nav-group-logged-out .btn {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .nav-group-logged-in {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .nav-user-badge {
+        justify-content: space-between;
+        width: 100%;
+        padding: 8px 14px;
+    }
+
+    .nav-group-logged-in .btn {
+        width: 100%;
+        padding: 12px;
+    }
+
+    /* Landing Page Mobile */
+    .landing-section {
+        padding: 50px 16px 70px;
+        gap: 50px;
+    }
+
+    .hero {
+        gap: 18px;
+    }
+
+    .hero-title {
+        font-size: clamp(2rem, 8vw, 2.7rem);
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 1.05rem;
+        line-height: 1.5;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+    }
+
+    .landing-stats {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .stat-card {
+        padding: 22px 18px;
+    }
+
+    .features-container {
+        gap: 24px;
+    }
+
+    .section-title {
+        font-size: 1.7rem;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .feature-card {
+        padding: 24px 20px;
+    }
+
+    /* Dashboard Main Area */
+    .dashboard-section {
+        padding: 16px 12px 30px;
+    }
+
+    .content-panel {
+        padding: 16px 14px;
+        border-radius: var(--radius-sm);
+    }
+
+    .dashboard-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .dashboard-header-row .btn {
+        width: 100%;
+    }
+
+    .dashboard-title {
+        font-size: 1.45rem;
+    }
+
+    .dashboard-subtitle {
+        font-size: 0.88rem;
+    }
+
+    /* Stats Grid */
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .mini-stat-card {
+        padding: 14px 12px;
+    }
+
+    .mini-stat-value {
+        font-size: 1.4rem;
+    }
+
+    .mini-stat-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+
+    .mini-stat-label {
+        font-size: 0.72rem;
+    }
+
+    /* Table Mobile Optimizations */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -4px;
+        border-radius: var(--radius-sm);
+    }
+
+    .complaint-table {
+        min-width: 660px;
+    }
+
+    .complaint-table th, .complaint-table td {
+        padding: 12px 14px;
+        font-size: 0.88rem;
+    }
+
+    /* Forms */
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .form-group {
+        margin-bottom: 14px;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+        padding: 10px 14px;
+    }
+
+    .label-with-badge {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .btn-gps-detect {
+        padding: 4px 8px;
+        font-size: 0.72rem;
+    }
+
+    .image-dropzone-btn {
+        padding: 14px 10px;
+        font-size: 0.9rem;
+    }
+
+    .image-preview-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .image-preview-img {
+        width: 100%;
+        max-height: 180px;
+        object-fit: cover;
+    }
+
+    /* Filters */
+    .filters-panel {
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .filters-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    /* City GIS Command Map Mobile */
+    .city-map-wrapper {
+        padding: 12px;
+        border-radius: var(--radius-md);
+    }
+
+    .map-canvas-container {
+        height: 380px;
+    }
+
+    .map-controls-panel {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .map-style-toggle-group {
+        display: flex;
+        width: 100%;
+    }
+
+    .map-style-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 7px 4px;
+        font-size: 0.72rem;
+    }
+
+    .map-filter-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .map-filter-group select {
+        flex: 1;
+    }
+
+    .map-controls-panel .btn {
+        width: 100%;
+    }
+
+    .map-stats-strip {
+        gap: 8px;
+    }
+
+    .map-stat-pill {
+        font-size: 0.72rem;
+        padding: 4px 10px;
+    }
+
+    .map-dpad-controller {
+        top: 8px;
+        right: 8px;
+        padding: 6px 8px;
+        transform: scale(0.88);
+        transform-origin: top right;
+    }
+
+    .map-legend {
+        bottom: 8px;
+        left: 8px;
+        font-size: 0.65rem;
+        padding: 6px 8px;
+    }
+
+    /* 360 Street View Modal Mobile */
+    .streetview-modal-backdrop {
+        padding: 8px;
+    }
+
+    .streetview-modal-content {
+        width: 100%;
+        height: 92vh;
+        border-radius: var(--radius-md);
+    }
+
+    .streetview-modal-header {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .streetview-modal-title {
+        font-size: 1rem;
+    }
+
+    .streetview-modal-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Department Budgets Grid Mobile */
+    .dept-budget-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .dept-card {
+        padding: 16px;
+    }
+
+    .dept-metrics-row {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .metric-val {
+        font-size: 0.88rem;
+    }
+
+    .budget-request-form {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .budget-request-form .form-group[style*="gridColumn"],
+    .budget-request-form button[style*="gridColumn"] {
+        grid-column: span 1 !important;
+    }
+
+    /* Modals Responsive */
+    .modal-overlay {
+        padding: 12px 8px;
+    }
+
+    .modal-card {
+        padding: 24px 16px;
+        border-radius: var(--radius-md);
+        max-height: 94vh;
+        width: 100%;
+    }
+
+    .modal-card.modal-lg {
+        max-width: 100%;
+    }
+
+    .modal-header {
+        margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+        font-size: 1.35rem;
+    }
+
+    .modal-details-title-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .before-after-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .before-after-img,
+    .before-after-empty,
+    .after-upload-dropzone {
+        height: 160px;
+    }
+
+    .sla-progress-box {
+        padding: 14px;
+    }
+
+    .sla-time-info {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .sla-countdown-timer {
+        font-size: 1.35rem;
+    }
+
+    .expense-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-lg {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+    }
+}
+
+/* --- SMALL MOBILE PHONES (<= 480px) --- */
+@media (max-width: 480px) {
+    .navbar {
+        height: 60px;
+        padding: 0 12px;
+    }
+
+    .nav-menu {
+        top: 60px;
+    }
+
+    .logo-text {
+        font-size: 1.25rem;
+    }
+
+    .hero-title {
+        font-size: 1.95rem;
+    }
+
+    .stats-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .mini-stat-card {
+        padding: 12px;
+    }
+
+    .dept-metrics-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .map-canvas-container {
+        height: 330px;
+    }
+
+    .map-dpad-controller {
+        transform: scale(0.8);
+        top: 6px;
+        right: 6px;
+    }
+
+    .toast-container {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        max-width: calc(100% - 24px);
+    }
+
+    .toast {
+        padding: 12px 14px;
+        font-size: 0.85rem;
+    }
+}
+
+/* --- COMPACT DPAD WHEN COLLAPSED --- */
+.map-dpad-controller.collapsed {
+    padding: 6px 10px;
+}
+
+.map-dpad-controller.collapsed .dpad-header {
+    margin-bottom: 0;
+}

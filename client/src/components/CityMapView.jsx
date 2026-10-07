@@ -32,6 +32,7 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
     const [selectedWard, setSelectedWard] = useState('ALL');
     const [stats, setStats] = useState({ total: 0, critical: 0, resolved: 0 });
     const [streetViewData, setStreetViewData] = useState(null);
+    const [dpadCollapsed, setDpadCollapsed] = useState(false);
 
     // In-Website Road Driving & Street Cruiser Mode
     const [isDrivingMode, setIsDrivingMode] = useState(false);
@@ -526,133 +527,140 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 )}
 
                 {/* Floating HUD D-Pad & Road Cruiser Controller */}
-                <div className={`map-dpad-controller ${isDrivingMode ? 'driving-active' : ''}`}>
-                    <div className="dpad-header">
-                        <i className="fa-solid fa-gamepad"></i> {isDrivingMode ? 'ROAD CRUISER' : 'PAN CONTROLS'}
+                <div className={`map-dpad-controller ${isDrivingMode ? 'driving-active' : ''} ${dpadCollapsed ? 'collapsed' : ''}`}>
+                    <div className="dpad-header" onClick={() => setDpadCollapsed(prev => !prev)} style={{ cursor: 'pointer', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span><i className="fa-solid fa-gamepad"></i> {isDrivingMode ? 'ROAD CRUISER' : 'PAN CONTROLS'}</span>
+                        <span className="dpad-collapse-icon" style={{ fontSize: '0.75rem', opacity: 0.8, marginLeft: '6px' }}>
+                            <i className={`fa-solid ${dpadCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}`}></i>
+                        </span>
                     </div>
 
-                    {/* Speed Controls in Driving Mode */}
-                    {isDrivingMode && (
-                        <div className="dpad-speed-toggle">
-                            <button 
-                                type="button" 
-                                className={`speed-btn ${driveSpeed === 1 ? 'active' : ''}`}
-                                onClick={() => setDriveSpeed(1)}
-                                title="Walking Pace"
-                            >
-                                🚶 1x
-                            </button>
-                            <button 
-                                type="button" 
-                                className={`speed-btn ${driveSpeed === 2 ? 'active' : ''}`}
-                                onClick={() => setDriveSpeed(2)}
-                                title="Driving Pace"
-                            >
-                                🚗 2x
-                            </button>
-                            <button 
-                                type="button" 
-                                className={`speed-btn ${driveSpeed === 3 ? 'active' : ''}`}
-                                onClick={() => setDriveSpeed(3)}
-                                title="Sprint Pace"
-                            >
-                                ⚡ 3x
-                            </button>
-                        </div>
+                    {!dpadCollapsed && (
+                        <>
+                            {/* Speed Controls in Driving Mode */}
+                            {isDrivingMode && (
+                                <div className="dpad-speed-toggle">
+                                    <button 
+                                        type="button" 
+                                        className={`speed-btn ${driveSpeed === 1 ? 'active' : ''}`}
+                                        onClick={() => setDriveSpeed(1)}
+                                        title="Walking Pace"
+                                    >
+                                        🚶 1x
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`speed-btn ${driveSpeed === 2 ? 'active' : ''}`}
+                                        onClick={() => setDriveSpeed(2)}
+                                        title="Driving Pace"
+                                    >
+                                        🚗 2x
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`speed-btn ${driveSpeed === 3 ? 'active' : ''}`}
+                                        onClick={() => setDriveSpeed(3)}
+                                        title="Sprint Pace"
+                                    >
+                                        ⚡ 3x
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="dpad-cross">
+                                <button 
+                                    type="button" 
+                                    className="dpad-btn dpad-up" 
+                                    onClick={() => handlePan(0, -150)}
+                                    title="Drive Forward / North [↑ / W]"
+                                >
+                                    <i className="fa-solid fa-arrow-up"></i>
+                                </button>
+                                <div className="dpad-middle-row">
+                                    <button 
+                                        type="button" 
+                                        className="dpad-btn dpad-left" 
+                                        onClick={() => handlePan(-150, 0)}
+                                        title="Steer Left / West [← / A]"
+                                    >
+                                        <i className="fa-solid fa-arrow-left"></i>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className="dpad-btn dpad-center" 
+                                        onClick={handleRecenter}
+                                        title="Recenter on City Center"
+                                    >
+                                        <i className="fa-solid fa-location-crosshairs"></i>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className="dpad-btn dpad-right" 
+                                        onClick={() => handlePan(150, 0)}
+                                        title="Steer Right / East [→ / D]"
+                                    >
+                                        <i className="fa-solid fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    className="dpad-btn dpad-down" 
+                                    onClick={() => handlePan(0, 150)}
+                                    title="Drive Reverse / South [↓ / S]"
+                                >
+                                    <i className="fa-solid fa-arrow-down"></i>
+                                </button>
+                            </div>
+
+                            {/* Auto Patrol & Fly to Next Buttons */}
+                            <div className="dpad-actions-row">
+                                <button 
+                                    type="button" 
+                                    className={`dpad-patrol-btn ${isAutoPatrolling ? 'active-patrol' : ''}`}
+                                    onClick={toggleAutoPatrol}
+                                    title="Auto-Drive along the road [Spacebar]"
+                                >
+                                    <i className="fa-solid fa-play"></i> {isAutoPatrolling ? 'Cruising...' : 'Auto-Patrol'}
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="dpad-fly-btn"
+                                    onClick={handleFlyToNextIncident}
+                                    title="Fly to next road defect"
+                                >
+                                    <i className="fa-solid fa-forward-step"></i> Next Defect
+                                </button>
+                            </div>
+
+                            {/* Quick Zoom Buttons */}
+                            <div className="dpad-zoom-row">
+                                <button 
+                                    type="button" 
+                                    className="dpad-zoom-btn" 
+                                    onClick={handleZoomIn}
+                                    title="Zoom In [+]"
+                                >
+                                    <i className="fa-solid fa-plus"></i>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="dpad-zoom-btn" 
+                                    onClick={handleZoomOut}
+                                    title="Zoom Out [-]"
+                                >
+                                    <i className="fa-solid fa-minus"></i>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className={`dpad-mode-toggle-btn ${isDrivingMode ? 'active' : ''}`}
+                                    onClick={toggleRoadDriveMode}
+                                    title="Toggle Street Drive Mode"
+                                >
+                                    {isDrivingMode ? 'Exit Drive' : '🚗 Drive'}
+                                </button>
+                            </div>
+                        </>
                     )}
-
-                    <div className="dpad-cross">
-                        <button 
-                            type="button" 
-                            className="dpad-btn dpad-up" 
-                            onClick={() => handlePan(0, -150)}
-                            title="Drive Forward / North [↑ / W]"
-                        >
-                            <i className="fa-solid fa-arrow-up"></i>
-                        </button>
-                        <div className="dpad-middle-row">
-                            <button 
-                                type="button" 
-                                className="dpad-btn dpad-left" 
-                                onClick={() => handlePan(-150, 0)}
-                                title="Steer Left / West [← / A]"
-                            >
-                                <i className="fa-solid fa-arrow-left"></i>
-                            </button>
-                            <button 
-                                type="button" 
-                                className="dpad-btn dpad-center" 
-                                onClick={handleRecenter}
-                                title="Recenter on City Center"
-                            >
-                                <i className="fa-solid fa-location-crosshairs"></i>
-                            </button>
-                            <button 
-                                type="button" 
-                                className="dpad-btn dpad-right" 
-                                onClick={() => handlePan(150, 0)}
-                                title="Steer Right / East [→ / D]"
-                            >
-                                <i className="fa-solid fa-arrow-right"></i>
-                            </button>
-                        </div>
-                        <button 
-                            type="button" 
-                            className="dpad-btn dpad-down" 
-                            onClick={() => handlePan(0, 150)}
-                            title="Drive Reverse / South [↓ / S]"
-                        >
-                            <i className="fa-solid fa-arrow-down"></i>
-                        </button>
-                    </div>
-
-                    {/* Auto Patrol & Fly to Next Buttons */}
-                    <div className="dpad-actions-row">
-                        <button 
-                            type="button" 
-                            className={`dpad-patrol-btn ${isAutoPatrolling ? 'active-patrol' : ''}`}
-                            onClick={toggleAutoPatrol}
-                            title="Auto-Drive along the road [Spacebar]"
-                        >
-                            <i className="fa-solid fa-play"></i> {isAutoPatrolling ? 'Cruising...' : 'Auto-Patrol'}
-                        </button>
-                        <button 
-                            type="button" 
-                            className="dpad-fly-btn"
-                            onClick={handleFlyToNextIncident}
-                            title="Fly to next road defect"
-                        >
-                            <i className="fa-solid fa-forward-step"></i> Next Defect
-                        </button>
-                    </div>
-
-                    {/* Quick Zoom Buttons */}
-                    <div className="dpad-zoom-row">
-                        <button 
-                            type="button" 
-                            className="dpad-zoom-btn" 
-                            onClick={handleZoomIn}
-                            title="Zoom In [+]"
-                        >
-                            <i className="fa-solid fa-plus"></i>
-                        </button>
-                        <button 
-                            type="button" 
-                            className="dpad-zoom-btn" 
-                            onClick={handleZoomOut}
-                            title="Zoom Out [-]"
-                        >
-                            <i className="fa-solid fa-minus"></i>
-                        </button>
-                        <button 
-                            type="button" 
-                            className={`dpad-mode-toggle-btn ${isDrivingMode ? 'active' : ''}`}
-                            onClick={toggleRoadDriveMode}
-                            title="Toggle Street Drive Mode"
-                        >
-                            {isDrivingMode ? 'Exit Drive' : '🚗 Drive'}
-                        </button>
-                    </div>
                 </div>
             </div>
 
