@@ -78,64 +78,80 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [locationData, setLocationData] = useState(null);
     const [isDetectingGps, setIsDetectingGps] = useState(false);
 
-    // High-Precision GPS Geotagging & Auto-Ward Assign
+    // High-Precision GPS Geotagging with Multi-Tier Fallback (GPS -> Cellular/WiFi)
     const triggerGpsAutoDetect = (overrideWard = false) => {
         if (!navigator.geolocation) {
             showToast('Geolocation is not supported by your browser.', 'warning');
             return;
         }
         setIsDetectingGps(true);
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const { latitude, longitude, accuracy } = pos.coords;
-                let address = `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`;
-                let detectedWard = ward;
 
-                // Reverse geocoding via OpenStreetMap Nominatim for human-readable street/neighborhood
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
-                        headers: { 'Accept': 'application/json' }
-                    });
-                    if (res.ok) {
-                        const geoData = await res.json();
-                        if (geoData && geoData.address) {
-                            const parts = [];
-                            if (geoData.address.road || geoData.address.suburb || geoData.address.neighbourhood) {
-                                parts.push(geoData.address.road || geoData.address.neighbourhood || geoData.address.suburb);
-                            }
-                            if (geoData.address.city || geoData.address.town || geoData.address.village) {
-                                parts.push(geoData.address.city || geoData.address.town || geoData.address.village);
-                            }
-                            if (parts.length > 0) address = parts.join(', ');
-                        }
-                    }
-                } catch (e) {
-                    console.debug('Reverse geocode fallback:', e);
-                }
+        const onLocationSuccess = async (pos) => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            let address = `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`;
+            let detectedWard = ward;
 
-                const sampleWards = ['Kadri South', 'Kadri North', 'Bejai', 'Bendoor', 'Lalbagh'];
-                const assignedWard = sampleWards[Math.floor(Math.abs(latitude + longitude) * 100) % sampleWards.length];
-
-                if (!detectedWard || overrideWard) {
-                    setWard(assignedWard);
-                }
-
-                setLocationData({
-                    latitude,
-                    longitude,
-                    accuracy: Math.round(accuracy || 0),
-                    address: address || `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`
+            // Reverse geocoding via OpenStreetMap Nominatim for human-readable street/neighborhood
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+                    headers: { 'Accept': 'application/json' }
                 });
+                if (res.ok) {
+                    const geoData = await res.json();
+                    if (geoData && geoData.address) {
+                        const parts = [];
+                        if (geoData.address.road || geoData.address.suburb || geoData.address.neighbourhood) {
+                            parts.push(geoData.address.road || geoData.address.neighbourhood || geoData.address.suburb);
+                        }
+                        if (geoData.address.city || geoData.address.town || geoData.address.village) {
+                            parts.push(geoData.address.city || geoData.address.town || geoData.address.village);
+                        }
+                        if (parts.length > 0) address = parts.join(', ');
+                    }
+                }
+            } catch (e) {
+                console.debug('Reverse geocode fallback:', e);
+            }
 
-                showToast(`📍 Exact Location Geotagged (±${Math.round(accuracy || 5)}m)`, 'success');
-                setIsDetectingGps(false);
-            },
+            const sampleWards = ['Kadri South', 'Kadri North', 'Bejai', 'Bendoor', 'Lalbagh'];
+            const assignedWard = sampleWards[Math.floor(Math.abs(latitude + longitude) * 100) % sampleWards.length];
+
+            if (!detectedWard || overrideWard) {
+                setWard(assignedWard);
+            }
+
+            setLocationData({
+                latitude,
+                longitude,
+                accuracy: Math.round(accuracy || 0),
+                address: address || `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`
+            });
+
+            showToast(`📍 Location Geotagged (±${Math.round(accuracy || 5)}m)`, 'success');
+            setIsDetectingGps(false);
+        };
+
+        // Tier 1: Try high-precision GPS (tolerates 60s cache for instant response)
+        navigator.geolocation.getCurrentPosition(
+            onLocationSuccess,
             (err) => {
-                console.warn('Geolocation access issue:', err.message);
-                setIsDetectingGps(false);
-                showToast('Could not fetch exact GPS location. Please check location permissions.', 'warning');
+                console.warn('GPS Tier 1 issue, trying Tier 2 network fallback...', err.message);
+                // Tier 2: Try network/WiFi location (works fast even indoors)
+                navigator.geolocation.getCurrentPosition(
+                    onLocationSuccess,
+                    (fallbackErr) => {
+                        console.warn('Geolocation failed completely:', fallbackErr.message);
+                        setIsDetectingGps(false);
+                        if (fallbackErr.code === 1) {
+                            showToast('🔒 Location blocked. Tap 🔒 in your browser URL bar to Allow Location access.', 'error');
+                        } else {
+                            showToast('📍 Turn ON Device Location/GPS in your phone notification shade and try again.', 'warning');
+                        }
+                    },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+                );
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
         );
     };
 
