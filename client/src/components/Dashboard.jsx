@@ -85,6 +85,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             return;
         }
         setIsDetectingGps(true);
+        showToast('📍 Finding exact GPS location...', 'info');
 
         const onLocationSuccess = async (pos) => {
             const { latitude, longitude, accuracy } = pos.coords;
@@ -705,12 +706,20 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                     style={{ display: 'none' }}
                                                 />
                                                 <div className="camera-choice-grid">
-                                                    <label htmlFor="complaint-camera" className="camera-action-btn camera-snap-btn">
+                                                    <label 
+                                                        htmlFor="complaint-camera" 
+                                                        className="camera-action-btn camera-snap-btn"
+                                                        onClick={() => triggerGpsAutoDetect(true)}
+                                                    >
                                                         <i className="fa-solid fa-camera"></i>
                                                         <span>Take Live Photo (Camera)</span>
                                                         <small>Auto-geotags your exact location</small>
                                                     </label>
-                                                    <label htmlFor="complaint-gallery" className="camera-action-btn gallery-pick-btn">
+                                                    <label 
+                                                        htmlFor="complaint-gallery" 
+                                                        className="camera-action-btn gallery-pick-btn"
+                                                        onClick={() => triggerGpsAutoDetect(true)}
+                                                    >
                                                         <i className="fa-solid fa-images"></i>
                                                         <span>Choose from Gallery</span>
                                                         <small>Select from photo library</small>
