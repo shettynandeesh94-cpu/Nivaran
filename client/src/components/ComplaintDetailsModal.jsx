@@ -235,6 +235,8 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         return 'badge-status-open';
     };
 
+    const isCorporatorOrStaff = user && (user.role === 'corporator' || user.role === 'admin' || user.role === 'technician');
+
     return (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
             <div className="modal-card modal-lg">
@@ -333,7 +335,9 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                         {/* AFTER Photo Box */}
                                         <div className="before-after-card">
                                             <div className="before-after-header">
-                                                <span className="after-tag"><i className="fa-solid fa-circle-check"></i> AFTER (Repair Proof)</span>
+                                                <span className="after-tag">
+                                                    <i className="fa-solid fa-circle-check"></i> {isCorporatorOrStaff ? 'AFTER (Repair Proof)' : 'AFTER (Corporator Proof)'}
+                                                </span>
                                             </div>
                                             {resolutionImage ? (
                                                 <div style={{ position: 'relative' }}>
@@ -344,20 +348,28 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                                         onClick={() => window.open(resolutionImage, '_blank')}
                                                         title="Click to view full image"
                                                     />
-                                                    {complaint.status !== 'RESOLVED' && (
+                                                    {isCorporatorOrStaff && complaint.status !== 'RESOLVED' && (
                                                         <label className="change-photo-btn">
                                                             <i className="fa-solid fa-camera"></i> Change Photo
                                                             <input type="file" accept="image/*" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
                                                         </label>
                                                     )}
                                                 </div>
-                                            ) : (
+                                            ) : isCorporatorOrStaff ? (
                                                 <label className="after-upload-dropzone">
                                                     <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '1.8rem', color: 'var(--secondary)' }}></i>
                                                     <span style={{ fontWeight: 600, marginTop: '6px' }}>Upload Resolution Photo</span>
                                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Click to browse or take camera photo</span>
                                                     <input type="file" accept="image/*" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
                                                 </label>
+                                            ) : (
+                                                <div className="before-after-empty" style={{ padding: '24px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '1.8rem', color: 'var(--secondary)', opacity: 0.8, marginBottom: '8px' }}></i>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>Resolution Proof Pending</span>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '200px' }}>
+                                                        The Corporator / Field Team will upload the verified repair photo upon fixing the issue.
+                                                    </span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -388,8 +400,8 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                         </div>
                                     )}
 
-                                    {/* Action Button: AI Before/After Auto-Verification (Eliminating Human Supervisor) */}
-                                    {complaint.status !== 'RESOLVED' && (
+                                    {/* Action Button: AI Before/After Auto-Verification (For Corporator / Official only) */}
+                                    {isCorporatorOrStaff && complaint.status !== 'RESOLVED' && (
                                         <div className="ai-verification-trigger-box" style={{ marginTop: '12px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                                                 <div>
