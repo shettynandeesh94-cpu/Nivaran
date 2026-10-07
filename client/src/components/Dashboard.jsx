@@ -78,7 +78,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [locationData, setLocationData] = useState(null);
     const [isDetectingGps, setIsDetectingGps] = useState(false);
 
-    // Auto-detect GPS coordinates & auto-assign Ward
+    // High-Precision GPS Geotagging & Auto-Ward Assign
     const triggerGpsAutoDetect = (overrideWard = false) => {
         if (!navigator.geolocation) {
             showToast('Geolocation is not supported by your browser.', 'warning');
@@ -86,28 +86,56 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
         }
         setIsDetectingGps(true);
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const { latitude, longitude } = pos.coords;
+            async (pos) => {
+                const { latitude, longitude, accuracy } = pos.coords;
+                let address = `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`;
+                let detectedWard = ward;
+
+                // Reverse geocoding via OpenStreetMap Nominatim for human-readable street/neighborhood
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (res.ok) {
+                        const geoData = await res.json();
+                        if (geoData && geoData.address) {
+                            const parts = [];
+                            if (geoData.address.road || geoData.address.suburb || geoData.address.neighbourhood) {
+                                parts.push(geoData.address.road || geoData.address.neighbourhood || geoData.address.suburb);
+                            }
+                            if (geoData.address.city || geoData.address.town || geoData.address.village) {
+                                parts.push(geoData.address.city || geoData.address.town || geoData.address.village);
+                            }
+                            if (parts.length > 0) address = parts.join(', ');
+                        }
+                    }
+                } catch (e) {
+                    console.debug('Reverse geocode fallback:', e);
+                }
+
                 const sampleWards = ['Kadri South', 'Kadri North', 'Bejai', 'Bendoor', 'Lalbagh'];
                 const assignedWard = sampleWards[Math.floor(Math.abs(latitude + longitude) * 100) % sampleWards.length];
+
+                if (!detectedWard || overrideWard) {
+                    setWard(assignedWard);
+                }
 
                 setLocationData({
                     latitude,
                     longitude,
-                    address: `GPS (${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°)`
+                    accuracy: Math.round(accuracy || 0),
+                    address: address || `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`
                 });
 
-                if (!ward || overrideWard) {
-                    setWard(assignedWard);
-                    showToast(`📍 GPS detected: Assigned to ${assignedWard}`, 'info');
-                }
+                showToast(`📍 Exact Location Geotagged (±${Math.round(accuracy || 5)}m)`, 'success');
                 setIsDetectingGps(false);
             },
             (err) => {
                 console.warn('Geolocation access issue:', err.message);
                 setIsDetectingGps(false);
+                showToast('Could not fetch exact GPS location. Please check location permissions.', 'warning');
             },
-            { timeout: 8000 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     };
 
@@ -120,10 +148,13 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('Image file size should be under 5MB', 'error');
+        if (file.size > 8 * 1024 * 1024) {
+            showToast('Image file size should be under 8MB', 'error');
             return;
         }
+
+        // Instantly capture high-precision GPS location where photo is taken
+        triggerGpsAutoDetect(true);
 
         const reader = new FileReader();
         reader.onloadend = async () => {
@@ -162,11 +193,6 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             }
         };
         reader.readAsDataURL(file);
-
-        // Auto-detect GPS Location & Ward if not already set
-        if (!ward) {
-            triggerGpsAutoDetect(false);
-        }
     };
 
     // Filters states
@@ -555,18 +581,31 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                             <div className="image-upload-wrapper">
                                                 <input 
                                                     type="file" 
-                                                    id="complaint-image" 
+                                                    id="complaint-camera" 
+                                                    accept="image/*" 
+                                                    capture="environment"
+                                                    onChange={handleImageFileChange}
+                                                    style={{ display: 'none' }}
+                                                />
+                                                <input 
+                                                    type="file" 
+                                                    id="complaint-gallery" 
                                                     accept="image/*" 
                                                     onChange={handleImageFileChange}
                                                     style={{ display: 'none' }}
                                                 />
-                                                <label htmlFor="complaint-image" className={`image-dropzone-btn ${attachment ? 'has-image' : ''}`}>
-                                                    <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '1.6rem', color: 'var(--secondary)' }}></i>
-                                                    <span>{attachment ? 'Change / Re-upload Photo' : 'Upload or Drag Photo (JPG, PNG, WEBP)'}</span>
-                                                    <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
-                                                        AI will instantly extract title, issue details & urgency
-                                                    </small>
-                                                </label>
+                                                <div className="camera-choice-grid">
+                                                    <label htmlFor="complaint-camera" className="camera-action-btn camera-snap-btn">
+                                                        <i className="fa-solid fa-camera"></i>
+                                                        <span>Take Live Photo (Camera)</span>
+                                                        <small>Auto-geotags your exact location</small>
+                                                    </label>
+                                                    <label htmlFor="complaint-gallery" className="camera-action-btn gallery-pick-btn">
+                                                        <i className="fa-solid fa-images"></i>
+                                                        <span>Choose from Gallery</span>
+                                                        <small>Select from photo library</small>
+                                                    </label>
+                                                </div>
                                             </div>
 
                                             {/* AI Scanning Status & Image Preview */}
@@ -583,6 +622,28 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                             </div>
                                                         )}
                                                     </div>
+                                                    
+                                                    {/* Geotag Indicator Card */}
+                                                    {locationData && (
+                                                        <div className="geotag-status-card">
+                                                            <div className="geotag-status-header">
+                                                                <div className="geotag-pulse-indicator">
+                                                                    <span className="pulse-dot"></span>
+                                                                    <strong>📸 Photo Geotagged at Exact Spot</strong>
+                                                                </div>
+                                                                <span className="geotag-accuracy-pill">
+                                                                    🎯 ±{locationData.accuracy || 5}m Accuracy
+                                                                </span>
+                                                            </div>
+                                                            <div className="geotag-coords-text">
+                                                                <i className="fa-solid fa-location-crosshairs"></i> {locationData.latitude.toFixed(6)}° N, {locationData.longitude.toFixed(6)}° E
+                                                            </div>
+                                                            <div className="geotag-address-text">
+                                                                <i className="fa-solid fa-map-pin"></i> {locationData.address}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <button 
                                                         type="button" 
                                                         className="btn btn-secondary btn-sm remove-image-btn"
@@ -591,7 +652,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                             setAiResult(null);
                                                         }}
                                                     >
-                                                        <i className="fa-solid fa-trash"></i> Remove Photo
+                                                        <i className="fa-solid fa-trash"></i> Retake / Remove Photo
                                                     </button>
                                                 </div>
                                             )}

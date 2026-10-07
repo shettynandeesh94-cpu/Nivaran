@@ -304,10 +304,13 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 pinColor = '#f59e0b'; // Yellow/Orange
             }
 
+            const isGeotagged = !!(c.location && c.location.latitude && c.location.longitude);
+
             // Custom Icon
             const iconHtml = `
                 <div class="custom-map-pin ${pulseClass}" style="background: ${pinColor};">
                     <i class="fa-solid ${getCategoryIcon(c.category)}"></i>
+                    ${isGeotagged ? '<span class="geotag-pin-badge" title="Live Camera Geotagged"><i class="fa-solid fa-camera"></i></span>' : ''}
                 </div>
             `;
 
@@ -331,6 +334,12 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                     </span>
                     <span class="map-popup-ward"><i class="fa-solid fa-location-dot"></i> ${c.ward}</span>
                 </div>
+                ${isGeotagged ? `
+                    <div style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; font-size: 0.72rem; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-camera-viewfinder"></i>
+                        <span><strong>Camera Geotag:</strong> ${coords[0].toFixed(5)}°, ${coords[1].toFixed(5)}°</span>
+                    </div>
+                ` : ''}
                 ${c.attachment ? `<img src="${c.attachment}" alt="Defect proof" class="map-popup-img" />` : ''}
                 <h4 class="map-popup-title">${c.title}</h4>
                 <p class="map-popup-desc">${c.description.slice(0, 100)}${c.description.length > 100 ? '...' : ''}</p>

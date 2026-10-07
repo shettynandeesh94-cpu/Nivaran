@@ -2,8 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nivaran" />
+    <meta name="theme-color" content="#0b0f19" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <title>Nivaran | Smart Civic Grievance Portal</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,5 +23,31 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Prevent double tap zoom and multi-finger pinch zoom on mobile to feel like a native app
+      document.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('gesturechange', function (e) {
+        e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('gestureend', function (e) {
+        e.preventDefault();
+      }, { passive: false });
+
+      // Prevent double-tap zoom on fast clicks
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+          // Allow clicks on inputs/buttons/links without zooming
+          if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) {
+            event.preventDefault();
+          }
+        }
+        lastTouchEnd = now;
+      }, { passive: false });
+    </script>
   </body>
 </html>
+

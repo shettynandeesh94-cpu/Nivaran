@@ -258,6 +258,20 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                             <p className="text-muted">
                                 <i className="fa-solid fa-location-dot"></i> {complaint.ward} | Category: {complaint.category || 'General'} | Department: {complaint.department?.name || 'Unassigned'}
                             </p>
+                            {complaint.location && complaint.location.latitude && (
+                                <div style={{ marginTop: '6px', fontSize: '0.82rem', color: '#38bdf8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                    <span><i className="fa-solid fa-camera-viewfinder"></i> <strong>Photo Geotag:</strong> {complaint.location.latitude.toFixed(6)}°, {complaint.location.longitude.toFixed(6)}°</span>
+                                    {complaint.location.address && <span style={{ color: 'var(--text-secondary)' }}>• {complaint.location.address}</span>}
+                                    <a 
+                                        href={`https://www.google.com/maps/search/?api=1&query=${complaint.location.latitude},${complaint.location.longitude}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        style={{ color: '#60a5fa', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                                    >
+                                        <i className="fa-solid fa-diamond-turn-right"></i> Navigate (Maps)
+                                    </a>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="modal-body-grid">
@@ -356,12 +370,20 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                                     )}
                                                 </div>
                                             ) : isCorporatorOrStaff ? (
-                                                <label className="after-upload-dropzone">
-                                                    <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '1.8rem', color: 'var(--secondary)' }}></i>
-                                                    <span style={{ fontWeight: 600, marginTop: '6px' }}>Upload Resolution Photo</span>
-                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Click to browse or take camera photo</span>
-                                                    <input type="file" accept="image/*" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
-                                                </label>
+                                                <div className="after-upload-options" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', height: '100%' }}>
+                                                    <input type="file" id="res-camera-input" accept="image/*" capture="environment" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
+                                                    <input type="file" id="res-gallery-input" accept="image/*" onChange={handleResolutionFileChange} style={{ display: 'none' }} />
+                                                    <label htmlFor="res-camera-input" className="after-upload-dropzone" style={{ cursor: 'pointer', padding: '14px 8px', margin: 0 }}>
+                                                        <i className="fa-solid fa-camera" style={{ fontSize: '1.5rem', color: 'var(--secondary)' }}></i>
+                                                        <span style={{ fontWeight: 600, fontSize: '0.82rem', marginTop: '4px' }}>Live Camera</span>
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Snap fix proof</span>
+                                                    </label>
+                                                    <label htmlFor="res-gallery-input" className="after-upload-dropzone" style={{ cursor: 'pointer', padding: '14px 8px', margin: 0 }}>
+                                                        <i className="fa-solid fa-images" style={{ fontSize: '1.5rem', color: 'var(--primary)' }}></i>
+                                                        <span style={{ fontWeight: 600, fontSize: '0.82rem', marginTop: '4px' }}>From Gallery</span>
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Upload image</span>
+                                                    </label>
+                                                </div>
                                             ) : (
                                                 <div className="before-after-empty" style={{ padding: '24px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                                     <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '1.8rem', color: 'var(--secondary)', opacity: 0.8, marginBottom: '8px' }}></i>
