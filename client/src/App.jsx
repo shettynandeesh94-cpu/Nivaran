@@ -73,9 +73,11 @@ const MainApp = () => {
 
   return (
     <>
-      {/* Glowing Accents */}
-      <div className="bg-glow bg-glow-1"></div>
-      <div className="bg-glow bg-glow-2"></div>
+      {/* Glowing Accents Container (constrained to avoid horizontal scroll on mobile) */}
+      <div className="bg-glow-container" aria-hidden="true">
+        <div className="bg-glow bg-glow-1"></div>
+        <div className="bg-glow bg-glow-2"></div>
+      </div>
 
       {/* Shared Navigation Header */}
       <Navbar 

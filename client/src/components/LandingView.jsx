@@ -20,7 +20,7 @@ export const LandingView = ({ setView, onOpenLogin, switchTab }) => {
                 <h1 className="hero-title">
                     Civic Resolution, <span className="gradient-text">Made Intelligent.</span>
                 </h1>
-                <p class="hero-subtitle">
+                <p className="hero-subtitle">
                     Submit grievances, prevent duplicate filings, and track live SLA progress. Powered by Nivaran's real-time routing and escalation engine.
                 </p>
                 <div className="hero-actions">
@@ -39,9 +39,9 @@ export const LandingView = ({ setView, onOpenLogin, switchTab }) => {
                     <div className="stat-label">SLA Compliance</div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon"><i class="fa-solid fa-bolt"></i></div>
-                    <div class="stat-number">&lt; 48 hrs</div>
-                    <div class="stat-label">Avg. Resolution Time</div>
+                    <div className="stat-icon"><i className="fa-solid fa-bolt"></i></div>
+                    <div className="stat-number">&lt; 48 hrs</div>
+                    <div className="stat-label">Avg. Resolution Time</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon"><i className="fa-solid fa-users"></i></div>

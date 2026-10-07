@@ -50,6 +50,9 @@
 html {
     scroll-behavior: smooth;
     background-color: var(--bg-darker);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 body {
@@ -57,32 +60,60 @@ body {
     color: var(--text-primary);
     background: radial-gradient(circle at 50% 0%, var(--bg-main) 0%, var(--bg-darker) 100%);
     min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
     position: relative;
+    -webkit-text-size-adjust: 100%;
 }
 
-/* Glowing Background Blobs */
+#root {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    width: 100%;
+    max-width: 100%;
+    flex: 1;
+    overflow-x: hidden;
+}
+
+/* Glowing Background Blobs (Locked within fixed viewport) */
+.bg-glow-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+}
+
 .bg-glow {
     position: absolute;
-    width: 600px;
-    height: 600px;
+    width: 400px;
+    height: 400px;
     border-radius: 50%;
-    filter: blur(140px);
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.25;
+    filter: blur(120px);
+    opacity: 0.22;
 }
 
 .bg-glow-1 {
     background: var(--primary);
-    top: -200px;
-    left: -200px;
+    top: -100px;
+    left: -100px;
 }
 
 .bg-glow-2 {
     background: var(--secondary);
-    bottom: -200px;
-    right: -200px;
+    bottom: -100px;
+    right: -100px;
 }
 
 /* Scrollbar Style */
