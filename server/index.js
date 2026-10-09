@@ -60,9 +60,9 @@ app.get(/.*/, (req, res, next) => {
 
 async function startServer() {
     try {
-        console.log('Connecting to MongoDB...');
-        await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 4000 });
-        console.log('Connected to MongoDB Atlas');
+        console.log('Connecting to MongoDB Atlas...');
+        await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+        console.log('✅ Successfully connected to MongoDB Atlas (Permanent Cloud Storage)');
     } catch (err) {
         console.warn('MongoDB Atlas connection failed:', err.message);
         console.log('Falling back to local in-memory MongoDB server...');
