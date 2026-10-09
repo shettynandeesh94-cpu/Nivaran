@@ -22,14 +22,25 @@ const complaintSchema = new mongoose.Schema({
         reportedAt: { type: Date, default: Date.now }
     }],
     resolutionAttachment: { type: String }, // file path/URL (After/Resolution photo)
+    resolutionLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        distanceMeters: { type: Number },
+        proximityStatus: { type: String, enum: ['EXACT_ON_SITE', 'NEAR_RADIUS_ACCEPTABLE', 'DISTANCE_MISMATCH', 'NO_GPS'], default: 'NO_GPS' },
+        isGeofenceVerified: { type: Boolean, default: false }
+    },
     resolutionVerification: {
         isVerified: { type: Boolean, default: false },
         verifiedAt: { type: Date },
-        verifiedBy: { type: String, default: 'AI_VISION_AUTO_ENGINE' },
+        verifiedBy: { type: String, default: 'AI_VISION_AND_GEOFENCE_ENGINE' },
         confidenceScore: { type: Number },
         summary: { type: String },
         beforeAfterComparison: { type: String },
-        status: { type: String, enum: ['PENDING', 'VERIFIED_RESOLVED', 'REJECTED_UNRESOLVED'], default: 'PENDING' }
+        distanceMeters: { type: Number },
+        proximityStatus: { type: String },
+        proximitySummary: { type: String },
+        status: { type: String, enum: ['PENDING', 'VERIFIED_RESOLVED', 'FLAGGED_REVIEW', 'REJECTED_UNRESOLVED'], default: 'PENDING' }
     },
     resolutionCost: { type: Number, default: 0 },
     resolutionExpenses: [{

@@ -31,6 +31,8 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
 
     // AI Before vs After Resolution Verification states
     const [resolutionImage, setResolutionImage] = useState(null);
+    const [resolutionLocation, setResolutionLocation] = useState(null);
+    const [isDetectingGps, setIsDetectingGps] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
     // Fetch Details on Open/ID change
@@ -44,6 +46,7 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                 setComplaint(data);
                 setStatusValue(data.status);
                 setResolutionImage(data.resolutionAttachment || null);
+                setResolutionLocation(data.resolutionLocation || null);
                 if (data.extensionRequest?.daysRequested) {
                     setAdminAddDays(data.extensionRequest.daysRequested.toString());
                 }
@@ -174,6 +177,29 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         }
     };
 
+    const captureResolutionGps = () => {
+        if (!navigator.geolocation) {
+            return;
+        }
+        setIsDetectingGps(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const loc = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                    address: ''
+                };
+                setResolutionLocation(loc);
+                setIsDetectingGps(false);
+            },
+            (err) => {
+                console.warn('Could not capture resolution GPS coordinates:', err.message);
+                setIsDetectingGps(false);
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    };
+
     const handleResolutionFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -191,7 +217,8 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         const reader = new FileReader();
         reader.onloadend = () => {
             setResolutionImage(reader.result);
-            showToast('Resolution photo attached. Click "Run AI Verification" to verify and auto-close.', 'info');
+            showToast('Resolution photo attached. Acquiring on-site GPS coordinates...', 'info');
+            captureResolutionGps();
         };
         reader.readAsDataURL(file);
     };
@@ -203,12 +230,14 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         }
 
         setIsVerifying(true);
-        showToast('🤖 AI Vision is conducting forensic Before vs. After inspection...', 'info');
+        showToast('🤖 AI Vision is conducting forensic Before vs. After & GPS proximity inspection...', 'info');
 
         try {
-            const res = await api.autoVerifyAndResolveComplaint(complaintId, resolutionImage);
+            const res = await api.autoVerifyAndResolveComplaint(complaintId, resolutionImage, resolutionLocation);
             if (res.isResolved) {
-                showToast('✅ Issue Verified by AI! Complaint autonomously marked as RESOLVED.', 'success');
+                showToast('✅ Issue Verified! Complaint autonomously marked as RESOLVED.', 'success');
+            } else if (res.complaint?.resolutionVerification?.proximityStatus === 'DISTANCE_MISMATCH') {
+                showToast('🚨 Location Mismatch: You are too far from the incident spot to close this ticket!', 'error');
             } else {
                 showToast('⚠️ AI Verification Flagged Incomplete Repair: Problem appears unresolved or photo is invalid.', 'warning');
             }
@@ -396,6 +425,32 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                         </div>
                                     </div>
 
+                                    {/* Live Geofence GPS coordinate indicator for corporator / technician */}
+                                    {isCorporatorOrStaff && resolutionImage && complaint.status !== 'RESOLVED' && (
+                                        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                                            {isDetectingGps ? (
+                                                <span className="gps-live-tag">
+                                                    <i className="fa-solid fa-circle-notch fa-spin"></i> Acquiring Live On-Site GPS...
+                                                </span>
+                                            ) : resolutionLocation?.latitude ? (
+                                                <span className="gps-live-tag" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                                                    <i className="fa-solid fa-location-dot"></i> Officer GPS: {resolutionLocation.latitude.toFixed(4)}°, {resolutionLocation.longitude.toFixed(4)}°
+                                                </span>
+                                            ) : (
+                                                <span className="gps-live-tag" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>
+                                                    <i className="fa-solid fa-triangle-exclamation"></i> GPS not detected (Using pure AI Vision)
+                                                </span>
+                                            )}
+                                            <button 
+                                                type="button"
+                                                onClick={captureResolutionGps}
+                                                style={{ background: 'none', border: 'none', color: 'var(--secondary)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            >
+                                                <i className="fa-solid fa-rotate"></i> Re-scan GPS
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {/* Additional Community Photos & Angles if multiple citizens reported the same spot */}
                                     {complaint.additionalEvidence && complaint.additionalEvidence.length > 0 && (
                                         <div style={{ marginTop: '12px', background: 'rgba(255, 255, 255, 0.02)', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
@@ -428,10 +483,10 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                                                 <div>
                                                     <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <i className="fa-solid fa-brain" style={{ color: 'var(--secondary)' }}></i> Autonomous Resolution Engine
+                                                        <i className="fa-solid fa-brain" style={{ color: 'var(--secondary)' }}></i> Dual-Factor Resolution Engine
                                                     </strong>
                                                     <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                                                        Gemini Vision compares Before vs. After photos to verify repair authenticity and auto-close ticket.
+                                                        Gemini Vision & Geofence Proximity verify repair authenticity and on-site presence before auto-resolving.
                                                     </p>
                                                 </div>
                                                 <button 
@@ -444,12 +499,12 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                                     {isVerifying ? (
                                                         <>
                                                             <i className="fa-solid fa-circle-notch fa-spin"></i>
-                                                            <span>AI Inspecting...</span>
+                                                            <span>AI & GPS Inspecting...</span>
                                                         </>
                                                     ) : (
                                                         <>
                                                             <i className="fa-solid fa-shield-halved"></i>
-                                                            <span>Run AI Verification & Auto-Resolve</span>
+                                                            <span>Run Dual Verification</span>
                                                         </>
                                                     )}
                                                 </button>
@@ -463,7 +518,9 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                             <div className="ai-report-header">
                                                 <div className="ai-report-badge">
                                                     {complaint.resolutionVerification.isVerified ? (
-                                                        <><i className="fa-solid fa-circle-check"></i> Autonomous AI Verification: RESOLVED</>
+                                                        <><i className="fa-solid fa-circle-check"></i> Dual-Factor Verification: RESOLVED</>
+                                                    ) : complaint.resolutionVerification.proximityStatus === 'DISTANCE_MISMATCH' ? (
+                                                        <><i className="fa-solid fa-triangle-exclamation"></i> Verification: FLAGGED (Distance Mismatch)</>
                                                     ) : (
                                                         <><i className="fa-solid fa-circle-xmark"></i> AI Verification: REJECTED (Unresolved)</>
                                                     )}
@@ -474,6 +531,27 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* Geofence Proximity Status Banner */}
+                                            {complaint.resolutionVerification.proximityStatus && (
+                                                <div className={`proximity-banner ${
+                                                    complaint.resolutionVerification.proximityStatus === 'EXACT_ON_SITE' ? 'on-site' :
+                                                    complaint.resolutionVerification.proximityStatus === 'NEAR_RADIUS_ACCEPTABLE' ? 'acceptable' :
+                                                    complaint.resolutionVerification.proximityStatus === 'DISTANCE_MISMATCH' ? 'mismatch' : 'no-gps'
+                                                }`}>
+                                                    <span>
+                                                        <i className={`fa-solid ${
+                                                            complaint.resolutionVerification.proximityStatus === 'EXACT_ON_SITE' ? 'fa-location-dot' :
+                                                            complaint.resolutionVerification.proximityStatus === 'NEAR_RADIUS_ACCEPTABLE' ? 'fa-location-crosshairs' :
+                                                            complaint.resolutionVerification.proximityStatus === 'DISTANCE_MISMATCH' ? 'fa-triangle-exclamation' : 'fa-info-circle'
+                                                        }`}></i> {complaint.resolutionVerification.proximitySummary || 'Proximity calculated.'}
+                                                    </span>
+                                                    {complaint.resolutionVerification.distanceMeters !== null && (
+                                                        <strong>{complaint.resolutionVerification.distanceMeters}m</strong>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             <p className="ai-report-summary">{complaint.resolutionVerification.summary}</p>
                                             {complaint.resolutionVerification.beforeAfterComparison && (
                                                 <div className="ai-report-comparison">
@@ -481,7 +559,7 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                                 </div>
                                             )}
                                             <div className="ai-report-footer">
-                                                <span><i className="fa-solid fa-robot"></i> Verified by: {complaint.resolutionVerification.verifiedBy || 'AI_VISION_AUTO_ENGINE'}</span>
+                                                <span><i className="fa-solid fa-robot"></i> Verified by: {complaint.resolutionVerification.verifiedBy || 'AI_VISION_AND_GEOFENCE_ENGINE'}</span>
                                                 <span><i className="fa-solid fa-clock"></i> {new Date(complaint.resolutionVerification.verifiedAt || complaint.updatedAt).toLocaleString()}</span>
                                             </div>
                                         </div>

@@ -133,10 +133,10 @@ export const api = {
         });
     },
 
-    autoVerifyAndResolveComplaint: async (id, resolutionImage) => {
+    autoVerifyAndResolveComplaint: async (id, resolutionImage, resolutionLocation = null) => {
         return await request(`/complaints/${id}/auto-verify-resolve`, {
             method: 'POST',
-            body: JSON.stringify({ resolutionImage }),
+            body: JSON.stringify({ resolutionImage, resolutionLocation }),
         });
     },
 

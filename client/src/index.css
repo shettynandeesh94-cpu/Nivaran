@@ -2128,6 +2128,51 @@ h1, h2, h3, h4, h5, h6 {
     padding-top: 6px;
 }
 
+.proximity-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+.proximity-banner.on-site {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+.proximity-banner.acceptable {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+.proximity-banner.mismatch {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+.proximity-banner.no-gps {
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+}
+
+.gps-live-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #818cf8;
+}
+
+
 /* --- LEAFLET GIS CITY MAP STYLES --- */
 .city-map-wrapper {
     background: radial-gradient(circle at 50% 0%, rgba(22, 28, 45, 0.75) 0%, rgba(11, 15, 25, 0.9) 100%);

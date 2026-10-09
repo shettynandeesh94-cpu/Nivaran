@@ -417,10 +417,11 @@ exports.sendAdminClarification = async (req, res) => {
 };
 
 // Autonomous AI Before vs After Resolution Verification & Auto-Closure
+// Autonomous AI Before vs After Resolution Verification & Geofence Proximity Auto-Closure
 exports.autoVerifyAndResolveComplaint = async (req, res) => {
     try {
         const { id } = req.params;
-        const { resolutionImage } = req.body;
+        const { resolutionImage, resolutionLocation } = req.body;
 
         if (!resolutionImage) {
             return res.status(400).json({ message: 'Resolution (After) photo is required for AI verification.' });
@@ -429,7 +430,42 @@ exports.autoVerifyAndResolveComplaint = async (req, res) => {
         const complaint = await Complaint.findById(id);
         if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-        // Run Before vs After inspection
+        // 1. Calculate Geofence Proximity (Tiered distance analysis)
+        let distanceMeters = null;
+        let proximityStatus = 'NO_GPS';
+        let proximitySummary = 'No GPS metadata on one or both photos. Evaluated using pure AI Vision.';
+        let isGeofencePassed = true;
+
+        if (
+            complaint.location?.latitude && 
+            complaint.location?.longitude && 
+            resolutionLocation?.latitude && 
+            resolutionLocation?.longitude
+        ) {
+            distanceMeters = calculateDistanceMeters(
+                complaint.location.latitude,
+                complaint.location.longitude,
+                resolutionLocation.latitude,
+                resolutionLocation.longitude
+            );
+
+            if (distanceMeters <= 150) {
+                proximityStatus = 'EXACT_ON_SITE';
+                proximitySummary = `📍 Verified On-Site: Resolution photo captured ${Math.round(distanceMeters)}m from incident location (Within 150m radius).`;
+                isGeofencePassed = true;
+            } else if (distanceMeters <= 500) {
+                proximityStatus = 'NEAR_RADIUS_ACCEPTABLE';
+                proximitySummary = `📍 Acceptable Proximity: Resolution photo captured ${Math.round(distanceMeters)}m from incident location (Within 500m drift tolerance).`;
+                isGeofencePassed = true;
+            } else {
+                proximityStatus = 'DISTANCE_MISMATCH';
+                const distKm = (distanceMeters / 1000).toFixed(1);
+                proximitySummary = `🚨 Location Mismatch: Resolution photo was captured ${Math.round(distanceMeters)}m (${distKm}km) away from incident location. Officer must be on-site!`;
+                isGeofencePassed = false;
+            }
+        }
+
+        // 2. Run Before vs After Vision AI Inspection
         const verification = await verifyResolutionImages(
             complaint.attachment || null,
             resolutionImage,
@@ -440,21 +476,47 @@ exports.autoVerifyAndResolveComplaint = async (req, res) => {
             }
         );
 
+        // Combined Final Verification Verdict
+        const isDualVerified = verification.isResolved && isGeofencePassed;
+        let finalStatus = 'PENDING';
+
+        if (isDualVerified) {
+            finalStatus = 'VERIFIED_RESOLVED';
+        } else if (!isGeofencePassed) {
+            finalStatus = 'FLAGGED_REVIEW';
+        } else {
+            finalStatus = 'REJECTED_UNRESOLVED';
+        }
+
         complaint.resolutionAttachment = resolutionImage;
+        if (resolutionLocation) {
+            complaint.resolutionLocation = {
+                latitude: resolutionLocation.latitude,
+                longitude: resolutionLocation.longitude,
+                address: resolutionLocation.address || '',
+                distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null,
+                proximityStatus,
+                isGeofenceVerified: isGeofencePassed
+            };
+        }
+
         complaint.resolutionVerification = {
-            isVerified: verification.isResolved,
+            isVerified: isDualVerified,
             verifiedAt: new Date(),
-            verifiedBy: 'AI_VISION_AUTO_ENGINE',
+            verifiedBy: 'AI_VISION_AND_GEOFENCE_ENGINE',
             confidenceScore: verification.confidenceScore || 85,
-            summary: verification.summary || 'AI visual inspection completed.',
+            summary: verification.summary || 'Visual inspection completed.',
             beforeAfterComparison: verification.beforeAfterComparison || 'Visual inspection verified.',
-            status: verification.status || (verification.isResolved ? 'VERIFIED_RESOLVED' : 'REJECTED_UNRESOLVED')
+            distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null,
+            proximityStatus,
+            proximitySummary,
+            status: finalStatus
         };
 
         let autoDeductedBudget = false;
 
         // If verified as resolved, autonomously update status to RESOLVED
-        if (verification.isResolved) {
+        if (isDualVerified) {
             complaint.status = 'RESOLVED';
 
             // Autonomous Budget Logging: if no expenses logged yet, use AI estimatedCost
@@ -486,18 +548,27 @@ exports.autoVerifyAndResolveComplaint = async (req, res) => {
             .populate('department')
             .populate('createdBy', 'name email role');
 
+        let responseMessage = '';
+        if (isDualVerified) {
+            responseMessage = `✅ Dual Verification Successful! AI Vision confirmed defect resolved and Officer location verified on-site (${distanceMeters !== null ? `${Math.round(distanceMeters)}m` : 'On-Site'}).`;
+        } else if (!isGeofencePassed) {
+            responseMessage = `🚨 Location Mismatch: Resolution photo was taken ${(distanceMeters / 1000).toFixed(1)}km away from the incident location. On-site verification required!`;
+        } else {
+            responseMessage = `⚠️ AI Verification Flagged Incomplete Repair: Problem appears unresolved or photo is invalid.`;
+        }
+
         res.json({
             success: true,
-            isResolved: verification.isResolved,
-            message: verification.isResolved 
-                ? '✅ AI Visual Verification Successful! Complaint autonomously marked as RESOLVED.'
-                : '⚠️ AI Verification Flagged Incomplete Repair: Defect is still visible or photo is invalid.',
+            isResolved: isDualVerified,
+            message: responseMessage,
             verification: complaint.resolutionVerification,
+            proximityStatus,
+            distanceMeters: distanceMeters !== null ? Math.round(distanceMeters) : null,
             autoDeductedBudget,
             complaint: populated
         });
     } catch (err) {
         console.error('Error in autoVerifyAndResolveComplaint controller:', err);
-        res.status(500).json({ message: 'Error performing AI resolution verification', error: err.message });
+        res.status(500).json({ message: 'Error performing AI & Geofence resolution verification', error: err.message });
     }
 };
