@@ -33,8 +33,8 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    const signup = async (name, email, password, role, ward) => {
-        return await api.signup(name, email, password, role, ward);
+    const signup = async (...args) => {
+        return await api.signup(...args);
     };
 
     const logout = () => {

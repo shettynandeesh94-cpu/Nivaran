@@ -77,10 +77,16 @@ export const api = {
         return data;
     },
 
-    signup: async (name, email, password, role, ward) => {
+    signup: async (nameOrData, email, password, role, ward, district, taluk, panchayat) => {
+        let body;
+        if (typeof nameOrData === 'object' && nameOrData !== null) {
+            body = nameOrData;
+        } else {
+            body = { name: nameOrData, email, password, role, ward, district, taluk, panchayat };
+        }
         return await request('/auth/signup', {
             method: 'POST',
-            body: JSON.stringify({ name, email, password, role, ward }),
+            body: JSON.stringify(body),
         });
     },
 

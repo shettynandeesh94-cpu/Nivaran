@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 // Signup
 exports.signup = async (req, res) => {
     try {
-        const { name, email, password, role, ward } = req.body;
+        const { name, email, password, role, ward, district, taluk, panchayat } = req.body;
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -14,12 +14,18 @@ exports.signup = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Standardize ward identifier from panchayat / ward
+        const effectiveWard = panchayat || ward || (taluk ? `${taluk} Rural` : 'General Ward');
+
         const newUser = new User({
             name,
             email,
             password: hashedPassword,
             role: role || 'citizen',
-            ward,
+            district: district || '',
+            taluk: taluk || '',
+            panchayat: panchayat || '',
+            ward: effectiveWard,
         });
 
         await newUser.save();
@@ -54,14 +60,23 @@ exports.login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user._id, role: user.role, ward: user.ward },
+            { id: user._id, role: user.role, ward: user.ward, district: user.district, taluk: user.taluk, panchayat: user.panchayat },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 
         res.json({
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role, ward: user.ward },
+            user: { 
+                id: user._id, 
+                name: user.name, 
+                email: user.email, 
+                role: user.role, 
+                ward: user.ward,
+                district: user.district,
+                taluk: user.taluk,
+                panchayat: user.panchayat
+            },
         });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });

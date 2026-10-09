@@ -5,7 +5,10 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ['citizen', 'corporator', 'admin', 'technician'], default: 'citizen' },
-    ward: { type: String }, // for citizens, corporators, technicians
+    district: { type: String },
+    taluk: { type: String },
+    panchayat: { type: String },
+    ward: { type: String }, // for citizens, corporators, technicians (panchayat / ward)
     specialization: { type: String }, // e.g. 'Streetlights', 'Roads', 'Water Supply', 'Sanitation', 'Health'
     phone: { type: String },
     isAvailable: { type: Boolean, default: true },

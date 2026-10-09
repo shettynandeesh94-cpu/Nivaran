@@ -1,16 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { karnatakaLocations } from '../data/karnatakaLocations';
 
 export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('citizen');
-    const [ward, setWard] = useState('');
+    
+    // Cascading location state
+    const [district, setDistrict] = useState('');
+    const [taluk, setTaluk] = useState('');
+    const [panchayat, setPanchayat] = useState('');
     
     const { signup } = useAuth();
 
+    // Derived lists
+    const districtList = useMemo(() => {
+        return Object.keys(karnatakaLocations).sort((a, b) => a.localeCompare(b));
+    }, []);
+
+    const talukList = useMemo(() => {
+        if (!district || !karnatakaLocations[district]) return [];
+        return Object.keys(karnatakaLocations[district]).sort((a, b) => a.localeCompare(b));
+    }, [district]);
+
+    const panchayatList = useMemo(() => {
+        if (!district || !taluk || !karnatakaLocations[district]?.[taluk]) return [];
+        return [...karnatakaLocations[district][taluk]].sort((a, b) => a.localeCompare(b));
+    }, [district, taluk]);
+
     if (!isOpen) return null;
+
+    const handleDistrictChange = (e) => {
+        const selected = e.target.value;
+        setDistrict(selected);
+        setTaluk('');
+        setPanchayat('');
+    };
+
+    const handleTalukChange = (e) => {
+        const selected = e.target.value;
+        setTaluk(selected);
+        setPanchayat('');
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,19 +52,47 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
         const cleanEmail = email.trim();
         const cleanPassword = password;
         
-        if (!cleanName || !cleanEmail || !cleanPassword || !role || !ward) {
-            showToast('All fields are required', 'error');
+        if (!cleanName || !cleanEmail || !cleanPassword || !role) {
+            showToast('Please fill in all personal details', 'error');
             return;
         }
 
+        if (!district) {
+            showToast('Please select your District', 'error');
+            return;
+        }
+
+        if (!taluk) {
+            showToast('Please select your Taluk', 'error');
+            return;
+        }
+
+        if (!panchayat) {
+            showToast('Please select your Gram Panchayat', 'error');
+            return;
+        }
+
+        const effectiveWard = panchayat || `${taluk} Rural`;
+
         try {
-            await signup(cleanName, cleanEmail, cleanPassword, role, ward);
+            await signup({
+                name: cleanName,
+                email: cleanEmail,
+                password: cleanPassword,
+                role,
+                district,
+                taluk,
+                panchayat,
+                ward: effectiveWard
+            });
             showToast('Registration successful! Please sign in.', 'success');
             setName('');
             setEmail('');
             setPassword('');
             setRole('citizen');
-            setWard('');
+            setDistrict('');
+            setTaluk('');
+            setPanchayat('');
             onGotoLogin();
         } catch (err) {
             showToast(err.message || 'Registration failed.', 'error');
@@ -40,12 +101,12 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
 
     return (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div className="modal-card">
+            <div className="modal-card" style={{ maxWidth: '540px' }}>
                 <button className="modal-close-btn" onClick={onClose}><i className="fa-solid fa-xmark"></i></button>
                 <div className="modal-header">
                     <i className="fa-solid fa-shield-halved modal-logo-icon"></i>
                     <h3>Join Nivaran</h3>
-                    <p>Create an account to submit and monitor civic issues</p>
+                    <p>Panchayati Raj & Civic Grievance Redressal Portal</p>
                 </div>
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
@@ -53,7 +114,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                         <input 
                             type="text" 
                             id="signup-name" 
-                            placeholder="John Doe" 
+                            placeholder="e.g. Ramesh Gowda" 
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required 
@@ -82,38 +143,134 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                             minLength={6}
                         />
                     </div>
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label htmlFor="signup-role">Account Type</label>
-                            <select 
-                                id="signup-role" 
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                required
-                            >
-                                <option value="citizen">Citizen</option>
-                                <option value="corporator">Corporator</option>
-                                <option value="admin">Administrator</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="signup-ward">Ward</label>
-                            <select 
-                                id="signup-ward" 
-                                value={ward}
-                                onChange={(e) => setWard(e.target.value)}
-                                required
-                            >
-                                <option value="">-- Select Ward --</option>
-                                <option value="Kadri South">Kadri South</option>
-                                <option value="Kadri North">Kadri North</option>
-                                <option value="Bejai">Bejai</option>
-                                <option value="Bendoor">Bendoor</option>
-                                <option value="Lalbagh">Lalbagh</option>
-                            </select>
-                        </div>
+                    
+                    <div className="form-group">
+                        <label htmlFor="signup-role">Account Type</label>
+                        <select 
+                            id="signup-role" 
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            required
+                        >
+                            <option value="citizen">Citizen (ಗ್ರಾಮಸ್ಥ)</option>
+                            <option value="corporator">Panchayat Officer / PDO</option>
+                            <option value="admin">Administrator / ZP CEO</option>
+                        </select>
                     </div>
-                    <button type="submit" className="btn btn-primary btn-block">Register</button>
+
+                    {/* Hierarchical Location Section */}
+                    <div style={{
+                        marginTop: '1.25rem',
+                        marginBottom: '1.5rem',
+                        padding: '1rem',
+                        background: 'rgba(99, 102, 241, 0.04)',
+                        border: '1px solid rgba(99, 102, 241, 0.15)',
+                        borderRadius: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <i className="fa-solid fa-location-dot" style={{ color: '#818cf8' }}></i>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#e2e8f0', letterSpacing: '0.02em' }}>
+                                Jurisdiction / ಸ್ಥಳೀಯ ವ್ಯಾಪ್ತಿ
+                            </span>
+                        </div>
+
+                        {/* Step 1: District */}
+                        <div className="form-group" style={{ marginBottom: '12px' }}>
+                            <label htmlFor="signup-district" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                1. District (ಜಿಲ್ಲೆ) <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <select 
+                                id="signup-district" 
+                                value={district}
+                                onChange={handleDistrictChange}
+                                required
+                            >
+                                <option value="">-- Select District ({districtList.length} Available) --</option>
+                                {districtList.map((d) => (
+                                    <option key={d} value={d}>{d}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Step 2: Taluk */}
+                        <div className="form-group" style={{ marginBottom: '12px' }}>
+                            <label htmlFor="signup-taluk" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                2. Taluk (ತಾಲೂಕು) <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <select 
+                                id="signup-taluk" 
+                                value={taluk}
+                                onChange={handleTalukChange}
+                                disabled={!district}
+                                required
+                            >
+                                <option value="">
+                                    {district ? `-- Select Taluk (${talukList.length} in ${district}) --` : '-- Select District First --'}
+                                </option>
+                                {talukList.map((t) => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Step 3: Gram Panchayat */}
+                        <div className="form-group" style={{ marginBottom: '6px' }}>
+                            <label htmlFor="signup-panchayat" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                3. Gram Panchayat (ಗ್ರಾಮ ಪಂಚಾಯತಿ) <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <select 
+                                id="signup-panchayat" 
+                                value={panchayat}
+                                onChange={(e) => setPanchayat(e.target.value)}
+                                disabled={!taluk}
+                                required
+                            >
+                                <option value="">
+                                    {taluk ? `-- Select Gram Panchayat (${panchayatList.length} in ${taluk}) --` : '-- Select Taluk First --'}
+                                </option>
+                                {panchayatList.map((gp) => (
+                                    <option key={gp} value={gp}>{gp}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Active Selection Breadcrumb */}
+                        {district && (
+                            <div style={{
+                                marginTop: '10px',
+                                padding: '8px 12px',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                borderRadius: '8px',
+                                fontSize: '0.78rem',
+                                color: '#a5b4fc',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                flexWrap: 'wrap'
+                            }}>
+                                <i className="fa-solid fa-map-pin" style={{ color: '#6366f1' }}></i>
+                                <span>Karnataka</span>
+                                <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.65rem', opacity: 0.6 }}></i>
+                                <strong>{district}</strong>
+                                {taluk && (
+                                    <>
+                                        <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.65rem', opacity: 0.6 }}></i>
+                                        <strong>{taluk}</strong>
+                                    </>
+                                )}
+                                {panchayat && (
+                                    <>
+                                        <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.65rem', opacity: 0.6 }}></i>
+                                        <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{panchayat} GP</span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <button type="submit" className="btn btn-primary btn-block" style={{ padding: '12px' }}>
+                        Register Account
+                    </button>
                     <div className="modal-footer">
                         Already have an account? <a href="#" onClick={(e) => { e.preventDefault(); onGotoLogin(); }}>Sign In</a>
                     </div>
