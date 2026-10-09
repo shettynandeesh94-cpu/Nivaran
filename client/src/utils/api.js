@@ -11,8 +11,12 @@ const setToken = (token) => localStorage.setItem('nivaran_token', token);
 const clearToken = () => localStorage.removeItem('nivaran_token');
 
 const getUser = () => {
-    const user = localStorage.getItem('nivaran_user');
-    return user ? JSON.parse(user) : null;
+    try {
+        const user = localStorage.getItem('nivaran_user');
+        return user ? JSON.parse(user) : null;
+    } catch (e) {
+        return null;
+    }
 };
 const setUser = (user) => localStorage.setItem('nivaran_user', JSON.stringify(user));
 const clearUser = () => localStorage.removeItem('nivaran_user');
