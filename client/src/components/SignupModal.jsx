@@ -8,6 +8,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('citizen');
+    const [submitting, setSubmitting] = useState(false);
     
     // Cascading location state
     const [district, setDistrict] = useState('');
@@ -92,6 +93,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
         const effectiveWard = effectivePanchayat || `${effectiveTaluk} Rural`;
 
         try {
+            setSubmitting(true);
             await signup({
                 name: cleanName,
                 email: cleanEmail,
@@ -115,6 +117,8 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
             onGotoLogin();
         } catch (err) {
             showToast(err.message || 'Registration failed.', 'error');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -279,8 +283,8 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                         )}
                     </div>
 
-                    <button type="submit" className="btn btn-primary btn-block" style={{ padding: '12px' }}>
-                        Register Account
+                    <button type="submit" className="btn btn-primary btn-block" style={{ padding: '12px' }} disabled={submitting}>
+                        {submitting ? 'Registering Account...' : 'Register Account'}
                     </button>
                     <div className="modal-footer">
                         Already have an account? <a href="#" onClick={(e) => { e.preventDefault(); onGotoLogin(); }}>Sign In</a>

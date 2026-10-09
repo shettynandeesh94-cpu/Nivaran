@@ -28,8 +28,14 @@ const MainApp = () => {
   const [toasts, setToasts] = useState([]);
 
   const showToast = React.useCallback((message, type = 'info') => {
+    if (!message) return;
     const id = Date.now() + Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => {
+      // Deduplicate identical messages and cap max visible toasts to 3
+      const withoutDuplicate = prev.filter((t) => t.message !== message);
+      const capped = withoutDuplicate.slice(-2);
+      return [...capped, { id, message, type }];
+    });
   }, []);
 
   const removeToast = React.useCallback((id) => {

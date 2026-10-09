@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 export const LoginModal = ({ isOpen, onClose, onGotoSignup, showToast }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const { login } = useAuth();
 
     if (!isOpen) return null;
@@ -20,11 +21,14 @@ export const LoginModal = ({ isOpen, onClose, onGotoSignup, showToast }) => {
         }
 
         try {
+            setSubmitting(true);
             const data = await login(cleanEmail, cleanPassword);
             showToast(`Welcome back, ${data.user.name}!`, 'success');
             onClose();
         } catch (err) {
             showToast(err.message || 'Login failed. Please check credentials.', 'error');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -60,7 +64,9 @@ export const LoginModal = ({ isOpen, onClose, onGotoSignup, showToast }) => {
                             required 
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary btn-block">Sign In</button>
+                    <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
+                        {submitting ? 'Signing In...' : 'Sign In'}
+                    </button>
                     <div className="modal-footer">
                         Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); onGotoSignup(); }}>Register here</a>
                     </div>
