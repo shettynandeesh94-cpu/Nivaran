@@ -67,11 +67,16 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
 
     // File complaint states
     const [title, setTitle] = useState('');
-    const [ward, setWard] = useState('');
+    const [ward, setWard] = useState(user?.panchayat || user?.ward || '');
     const [description, setDescription] = useState('');
     const [attachment, setAttachment] = useState(null);
     const [smartPredict, setSmartPredict] = useState({ category: 'General', priority: 'LOW', slaText: '15 Days (360 hrs)' });
     
+    // Dynamic unique locations from existing complaints
+    const availableWards = useMemo(() => {
+        return [...new Set(complaints.map(c => c.ward).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    }, [complaints]);
+
     // Vision AI & Geolocation states
     const [isAnalyzingAi, setIsAnalyzingAi] = useState(false);
     const [aiResult, setAiResult] = useState(null);
@@ -113,7 +118,8 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             let address = `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`;
             let detectedWard = ward;
 
-            // Reverse geocoding via OpenStreetMap Nominatim for human-readable street/neighborhood
+            // Reverse geocoding via OpenStreetMap Nominatim for exact real Karnataka address & village/panchayat
+            let detectedLocality = '';
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
                     headers: { 'Accept': 'application/json' }
@@ -125,31 +131,32 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                         if (geoData.address.road || geoData.address.suburb || geoData.address.neighbourhood) {
                             parts.push(geoData.address.road || geoData.address.neighbourhood || geoData.address.suburb);
                         }
-                        if (geoData.address.city || geoData.address.town || geoData.address.village) {
-                            parts.push(geoData.address.city || geoData.address.town || geoData.address.village);
+                        if (geoData.address.village || geoData.address.town || geoData.address.city_district || geoData.address.county || geoData.address.city) {
+                            parts.push(geoData.address.village || geoData.address.town || geoData.address.city_district || geoData.address.county || geoData.address.city);
                         }
                         if (parts.length > 0) address = parts.join(', ');
+
+                        detectedLocality = geoData.address.village || geoData.address.suburb || geoData.address.neighbourhood || geoData.address.town || geoData.address.city_district || geoData.address.city || '';
                     }
                 }
             } catch (e) {
                 console.debug('Reverse geocode fallback:', e);
             }
 
-            const sampleWards = ['Kadri South', 'Kadri North', 'Bejai', 'Bendoor', 'Lalbagh'];
-            const assignedWard = sampleWards[Math.floor(Math.abs(latitude + longitude) * 100) % sampleWards.length];
+            const assignedLocality = detectedLocality || user?.panchayat || user?.ward || (user?.taluk ? `${user.taluk} (GPS Loc)` : 'Karnataka Location');
 
-            if (!detectedWard || overrideWard) {
-                setWard(assignedWard);
+            if (!ward || overrideWard) {
+                setWard(assignedLocality);
             }
 
             setLocationData({
                 latitude,
                 longitude,
                 accuracy: Math.round(accuracy || 0),
-                address: address || `GPS (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`
+                address: address || `${assignedLocality} (${latitude.toFixed(6)}°, ${longitude.toFixed(6)}°)`
             });
 
-            showToast(`📍 Exact Location Geotagged (±${Math.round(accuracy || 5)}m)`, 'success');
+            showToast(`📍 Exact Location Geotagged: ${assignedLocality} (±${Math.round(accuracy || 5)}m)`, 'success');
             setIsDetectingGps(false);
         };
 
@@ -880,34 +887,40 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                         
                                         <div className="form-group">
                                             <div className="label-with-badge">
-                                                <label htmlFor="complaint-ward">Ward Location</label>
+                                                <label htmlFor="complaint-ward">
+                                                    Location / Gram Panchayat (ಸ್ಥಳೀಯ ವ್ಯಾಪ್ತಿ) <span style={{ color: '#ef4444' }}>*</span>
+                                                </label>
                                                 <button
                                                     type="button"
                                                     className="btn-gps-detect"
                                                     onClick={() => triggerGpsAutoDetect(true)}
-                                                    title="Detect Ward via GPS"
+                                                    title="Detect Exact GPS Location"
                                                 >
                                                     <i className={`fa-solid ${isDetectingGps ? 'fa-spinner fa-spin' : 'fa-crosshairs'}`}></i>
-                                                    {isDetectingGps ? ' Locating...' : ' Auto-Detect GPS'}
+                                                    {isDetectingGps ? ' Locating GPS...' : ' Auto-Detect Live GPS'}
                                                 </button>
                                             </div>
-                                            <select 
+                                            <input 
+                                                type="text"
                                                 id="complaint-ward" 
+                                                placeholder="e.g. Barkur GP / Brahmavara / Kadri or click Auto-Detect GPS"
                                                 value={ward}
                                                 onChange={(e) => setWard(e.target.value)}
                                                 required
-                                            >
-                                                <option value="">-- Choose Ward / Use GPS Detect --</option>
-                                                <option value="Kadri South">Kadri South</option>
-                                                <option value="Kadri North">Kadri North</option>
-                                                <option value="Bejai">Bejai</option>
-                                                <option value="Bendoor">Bendoor</option>
-                                                <option value="Lalbagh">Lalbagh</option>
-                                            </select>
-                                            {locationData && (
-                                                <div className="gps-coordinate-preview">
-                                                    <i className="fa-solid fa-location-dot"></i> {locationData.address}
+                                                style={{ width: '100%' }}
+                                            />
+                                            {locationData ? (
+                                                <div className="gps-coordinate-preview" style={{ marginTop: '8px' }}>
+                                                    <i className="fa-solid fa-location-dot" style={{ color: '#818cf8' }}></i> {locationData.address}
+                                                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#10b981' }}>✓ Geotagged</span>
                                                 </div>
+                                            ) : (
+                                                user?.district && (
+                                                    <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <i className="fa-solid fa-house-chimney" style={{ color: '#6366f1' }}></i>
+                                                        <span>Default Jurisdiction: <strong>{user.district}</strong> › {user.taluk} › <strong style={{ color: '#38bdf8' }}>{user.panchayat || user.ward}</strong></span>
+                                                    </div>
+                                                )
                                             )}
                                         </div>
 
@@ -967,7 +980,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
 
                                     <div className="smart-disclaimer">
                                         <i className="fa-solid fa-circle-info"></i>
-                                        <span>If a similar issue is already open in your ward, our engine will automatically merge the files to avoid congestion and escalate priority.</span>
+                                        <span>If a similar issue is already open in your locality, our engine will automatically merge the files to avoid congestion and escalate priority.</span>
                                     </div>
                                 </div>
                             </div>
@@ -980,7 +993,7 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                             <div className="dashboard-header-row">
                                 <div>
                                     <h2 className="dashboard-title">Complaints Board</h2>
-                                    <p className="dashboard-subtitle">Browse and filter grievances across wards.</p>
+                                    <p className="dashboard-subtitle">Browse and filter grievances across wards and Gram Panchayats.</p>
                                 </div>
                             </div>
 
@@ -997,12 +1010,10 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                 </div>
                                 <div className="filters-row">
                                     <select value={filterWard} onChange={(e) => setFilterWard(e.target.value)}>
-                                        <option value="">All Wards</option>
-                                        <option value="Kadri South">Kadri South</option>
-                                        <option value="Kadri North">Kadri North</option>
-                                        <option value="Bejai">Bejai</option>
-                                        <option value="Bendoor">Bendoor</option>
-                                        <option value="Lalbagh">Lalbagh</option>
+                                        <option value="">All Locations / Wards</option>
+                                        {availableWards.map((w) => (
+                                            <option key={w} value={w}>{w}</option>
+                                        ))}
                                     </select>
                                     <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
                                         <option value="">All Categories</option>

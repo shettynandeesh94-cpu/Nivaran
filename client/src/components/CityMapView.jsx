@@ -475,14 +475,12 @@ export const CityMapView = ({ complaints = [], onOpenDetails }) => {
                 </div>
 
                 <div className="map-filter-group">
-                    <label><i className="fa-solid fa-location-dot"></i> Ward:</label>
+                    <label><i className="fa-solid fa-location-dot"></i> Location:</label>
                     <select value={selectedWard} onChange={(e) => setSelectedWard(e.target.value)}>
-                        <option value="ALL">All Wards</option>
-                        <option value="Kadri South">Kadri South</option>
-                        <option value="Kadri North">Kadri North</option>
-                        <option value="Bejai">Bejai</option>
-                        <option value="Bendoor">Bendoor</option>
-                        <option value="Lalbagh">Lalbagh</option>
+                        <option value="ALL">All Locations / Wards</option>
+                        {[...new Set(complaints.map(c => c.ward).filter(Boolean))].sort().map((w) => (
+                            <option key={w} value={w}>{w}</option>
+                        ))}
                     </select>
                 </div>
 
