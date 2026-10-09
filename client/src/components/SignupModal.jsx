@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { karnatakaLocations } from '../data/karnatakaLocations';
+import { SearchableSelect } from './SearchableSelect';
 
 export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
     const [name, setName] = useState('');
@@ -34,8 +35,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
 
     if (!isOpen) return null;
 
-    const handleDistrictChange = (e) => {
-        const selected = e.target.value;
+    const handleDistrictChange = (selected) => {
         setDistrict(selected);
         setTaluk('');
         setCustomTaluk('');
@@ -43,8 +43,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
         setCustomPanchayat('');
     };
 
-    const handleTalukChange = (e) => {
-        const selected = e.target.value;
+    const handleTalukChange = (selected) => {
         setTaluk(selected);
         if (selected !== '__OTHER__') {
             setCustomTaluk('');
@@ -53,8 +52,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
         setCustomPanchayat('');
     };
 
-    const handlePanchayatChange = (e) => {
-        const selected = e.target.value;
+    const handlePanchayatChange = (selected) => {
         setPanchayat(selected);
         if (selected !== '__OTHER__') {
             setCustomPanchayat('');
@@ -179,120 +177,82 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                         </select>
                     </div>
 
-                    {/* Hierarchical Location Section */}
+                    {/* Hierarchical Location Section with Embedded Search Bars */}
                     <div style={{
                         marginTop: '1.25rem',
                         marginBottom: '1.5rem',
-                        padding: '1rem',
+                        padding: '1.1rem',
                         background: 'rgba(99, 102, 241, 0.04)',
-                        border: '1px solid rgba(99, 102, 241, 0.15)',
+                        border: '1px solid rgba(99, 102, 241, 0.18)',
                         borderRadius: '12px'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <i className="fa-solid fa-location-dot" style={{ color: '#818cf8' }}></i>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#e2e8f0', letterSpacing: '0.02em' }}>
-                                Jurisdiction / ಸ್ಥಳೀಯ ವ್ಯಾಪ್ತಿ
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-location-dot" style={{ color: '#818cf8' }}></i>
+                                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#e2e8f0', letterSpacing: '0.02em' }}>
+                                    Jurisdiction / ಸ್ಥಳೀಯ ವ್ಯಾಪ್ತಿ
+                                </span>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                🔍 Searchable Dropdowns
                             </span>
                         </div>
 
-                        {/* Step 1: District */}
-                        <div className="form-group" style={{ marginBottom: '12px' }}>
-                            <label htmlFor="signup-district" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                1. District (ಜಿಲ್ಲೆ) <span style={{ color: '#ef4444' }}>*</span>
-                            </label>
-                            <select 
-                                id="signup-district" 
-                                value={district}
-                                onChange={handleDistrictChange}
-                                required
-                            >
-                                <option value="">-- Select District ({districtList.length} Available) --</option>
-                                {districtList.map((d) => (
-                                    <option key={d} value={d}>{d}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Step 1: District with Searchbar */}
+                        <SearchableSelect
+                            id="signup-district"
+                            label="1. District"
+                            kannadaLabel="ಜಿಲ್ಲೆ"
+                            placeholder="Type to search district..."
+                            options={districtList}
+                            value={district}
+                            onChange={handleDistrictChange}
+                            required={true}
+                        />
 
-                        {/* Step 2: Taluk */}
-                        <div className="form-group" style={{ marginBottom: '12px' }}>
-                            <label htmlFor="signup-taluk" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                2. Taluk (ತಾಲೂಕು) <span style={{ color: '#ef4444' }}>*</span>
-                            </label>
-                            <select 
-                                id="signup-taluk" 
-                                value={taluk}
-                                onChange={handleTalukChange}
-                                disabled={!district}
-                                required
-                            >
-                                <option value="">
-                                    {district ? `-- Select Taluk (${talukList.length} in ${district}) --` : '-- Select District First --'}
-                                </option>
-                                {talukList.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                                {district && (
-                                    <option value="__OTHER__">➕ Other / Enter Custom Taluk...</option>
-                                )}
-                            </select>
+                        {/* Step 2: Taluk with Searchbar */}
+                        <SearchableSelect
+                            id="signup-taluk"
+                            label="2. Taluk"
+                            kannadaLabel="ತಾಲೂಕು"
+                            placeholder={district ? "Type to search taluk..." : "Select District First"}
+                            options={talukList}
+                            value={taluk}
+                            onChange={handleTalukChange}
+                            disabled={!district}
+                            required={true}
+                            allowOther={true}
+                            otherValue={customTaluk}
+                            onOtherChange={setCustomTaluk}
+                            otherPlaceholder="Enter custom taluk name..."
+                        />
 
-                            {taluk === '__OTHER__' && (
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter your Taluk name" 
-                                    value={customTaluk}
-                                    onChange={(e) => setCustomTaluk(e.target.value)}
-                                    style={{ marginTop: '8px' }}
-                                    required 
-                                />
-                            )}
-                        </div>
-
-                        {/* Step 3: Gram Panchayat */}
-                        <div className="form-group" style={{ marginBottom: '6px' }}>
-                            <label htmlFor="signup-panchayat" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                3. Gram Panchayat (ಗ್ರಾಮ ಪಂಚಾಯತಿ) <span style={{ color: '#ef4444' }}>*</span>
-                            </label>
-                            <select 
-                                id="signup-panchayat" 
-                                value={panchayat}
-                                onChange={handlePanchayatChange}
-                                disabled={!district || (!taluk && !customTaluk)}
-                                required
-                            >
-                                <option value="">
-                                    {effectiveTaluk 
-                                        ? `-- Select Gram Panchayat (${panchayatList.length} listed) --` 
-                                        : '-- Select Taluk First --'}
-                                </option>
-                                {panchayatList.map((gp) => (
-                                    <option key={gp} value={gp}>{gp}</option>
-                                ))}
-                                {effectiveTaluk && (
-                                    <option value="__OTHER__">➕ Other / Enter Custom Gram Panchayat...</option>
-                                )}
-                            </select>
-
-                            {panchayat === '__OTHER__' && (
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter your Gram Panchayat or Village name" 
-                                    value={customPanchayat}
-                                    onChange={(e) => setCustomPanchayat(e.target.value)}
-                                    style={{ marginTop: '8px' }}
-                                    required 
-                                />
-                            )}
-                        </div>
+                        {/* Step 3: Gram Panchayat with Searchbar */}
+                        <SearchableSelect
+                            id="signup-panchayat"
+                            label="3. Gram Panchayat"
+                            kannadaLabel="ಗ್ರಾಮ ಪಂಚಾಯತಿ"
+                            placeholder={effectiveTaluk ? "Type to search Gram Panchayat..." : "Select Taluk First"}
+                            options={panchayatList}
+                            value={panchayat}
+                            onChange={handlePanchayatChange}
+                            disabled={!district || (!taluk && !customTaluk)}
+                            required={true}
+                            allowOther={true}
+                            otherValue={customPanchayat}
+                            onOtherChange={setCustomPanchayat}
+                            otherPlaceholder="Enter Gram Panchayat or Village name..."
+                        />
 
                         {/* Active Selection Breadcrumb */}
                         {district && (
                             <div style={{
-                                marginTop: '10px',
-                                padding: '8px 12px',
+                                marginTop: '12px',
+                                padding: '10px 14px',
                                 background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid rgba(255, 255, 255, 0.06)',
                                 borderRadius: '8px',
-                                fontSize: '0.78rem',
+                                fontSize: '0.8rem',
                                 color: '#a5b4fc',
                                 display: 'flex',
                                 alignItems: 'center',
