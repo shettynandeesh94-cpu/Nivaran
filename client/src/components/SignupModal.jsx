@@ -11,7 +11,9 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
     // Cascading location state
     const [district, setDistrict] = useState('');
     const [taluk, setTaluk] = useState('');
+    const [customTaluk, setCustomTaluk] = useState('');
     const [panchayat, setPanchayat] = useState('');
+    const [customPanchayat, setCustomPanchayat] = useState('');
     
     const { signup } = useAuth();
 
@@ -26,7 +28,7 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
     }, [district]);
 
     const panchayatList = useMemo(() => {
-        if (!district || !taluk || !karnatakaLocations[district]?.[taluk]) return [];
+        if (!district || !taluk || taluk === '__OTHER__' || !karnatakaLocations[district]?.[taluk]) return [];
         return [...karnatakaLocations[district][taluk]].sort((a, b) => a.localeCompare(b));
     }, [district, taluk]);
 
@@ -36,14 +38,31 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
         const selected = e.target.value;
         setDistrict(selected);
         setTaluk('');
+        setCustomTaluk('');
         setPanchayat('');
+        setCustomPanchayat('');
     };
 
     const handleTalukChange = (e) => {
         const selected = e.target.value;
         setTaluk(selected);
+        if (selected !== '__OTHER__') {
+            setCustomTaluk('');
+        }
         setPanchayat('');
+        setCustomPanchayat('');
     };
+
+    const handlePanchayatChange = (e) => {
+        const selected = e.target.value;
+        setPanchayat(selected);
+        if (selected !== '__OTHER__') {
+            setCustomPanchayat('');
+        }
+    };
+
+    const effectiveTaluk = taluk === '__OTHER__' ? customTaluk.trim() : taluk;
+    const effectivePanchayat = panchayat === '__OTHER__' ? customPanchayat.trim() : panchayat;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -62,17 +81,17 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
             return;
         }
 
-        if (!taluk) {
-            showToast('Please select your Taluk', 'error');
+        if (!effectiveTaluk) {
+            showToast('Please select or specify your Taluk', 'error');
             return;
         }
 
-        if (!panchayat) {
-            showToast('Please select your Gram Panchayat', 'error');
+        if (!effectivePanchayat) {
+            showToast('Please select or specify your Gram Panchayat', 'error');
             return;
         }
 
-        const effectiveWard = panchayat || `${taluk} Rural`;
+        const effectiveWard = effectivePanchayat || `${effectiveTaluk} Rural`;
 
         try {
             await signup({
@@ -81,8 +100,8 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                 password: cleanPassword,
                 role,
                 district,
-                taluk,
-                panchayat,
+                taluk: effectiveTaluk,
+                panchayat: effectivePanchayat,
                 ward: effectiveWard
             });
             showToast('Registration successful! Please sign in.', 'success');
@@ -92,7 +111,9 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
             setRole('citizen');
             setDistrict('');
             setTaluk('');
+            setCustomTaluk('');
             setPanchayat('');
+            setCustomPanchayat('');
             onGotoLogin();
         } catch (err) {
             showToast(err.message || 'Registration failed.', 'error');
@@ -153,8 +174,8 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                             required
                         >
                             <option value="citizen">Citizen (ಗ್ರಾಮಸ್ಥ)</option>
-                            <option value="corporator">Panchayat Officer / PDO</option>
-                            <option value="admin">Administrator / ZP CEO</option>
+                            <option value="corporator">Panchayat Development Officer (PDO)</option>
+                            <option value="admin">Administrator / Taluk & District Officer</option>
                         </select>
                     </div>
 
@@ -210,7 +231,21 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                                 {talukList.map((t) => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
+                                {district && (
+                                    <option value="__OTHER__">➕ Other / Enter Custom Taluk...</option>
+                                )}
                             </select>
+
+                            {taluk === '__OTHER__' && (
+                                <input 
+                                    type="text" 
+                                    placeholder="Enter your Taluk name" 
+                                    value={customTaluk}
+                                    onChange={(e) => setCustomTaluk(e.target.value)}
+                                    style={{ marginTop: '8px' }}
+                                    required 
+                                />
+                            )}
                         </div>
 
                         {/* Step 3: Gram Panchayat */}
@@ -221,17 +256,33 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                             <select 
                                 id="signup-panchayat" 
                                 value={panchayat}
-                                onChange={(e) => setPanchayat(e.target.value)}
-                                disabled={!taluk}
+                                onChange={handlePanchayatChange}
+                                disabled={!district || (!taluk && !customTaluk)}
                                 required
                             >
                                 <option value="">
-                                    {taluk ? `-- Select Gram Panchayat (${panchayatList.length} in ${taluk}) --` : '-- Select Taluk First --'}
+                                    {effectiveTaluk 
+                                        ? `-- Select Gram Panchayat (${panchayatList.length} listed) --` 
+                                        : '-- Select Taluk First --'}
                                 </option>
                                 {panchayatList.map((gp) => (
                                     <option key={gp} value={gp}>{gp}</option>
                                 ))}
+                                {effectiveTaluk && (
+                                    <option value="__OTHER__">➕ Other / Enter Custom Gram Panchayat...</option>
+                                )}
                             </select>
+
+                            {panchayat === '__OTHER__' && (
+                                <input 
+                                    type="text" 
+                                    placeholder="Enter your Gram Panchayat or Village name" 
+                                    value={customPanchayat}
+                                    onChange={(e) => setCustomPanchayat(e.target.value)}
+                                    style={{ marginTop: '8px' }}
+                                    required 
+                                />
+                            )}
                         </div>
 
                         {/* Active Selection Breadcrumb */}
@@ -252,16 +303,16 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                                 <span>Karnataka</span>
                                 <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.65rem', opacity: 0.6 }}></i>
                                 <strong>{district}</strong>
-                                {taluk && (
+                                {effectiveTaluk && (
                                     <>
                                         <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.65rem', opacity: 0.6 }}></i>
-                                        <strong>{taluk}</strong>
+                                        <strong>{effectiveTaluk}</strong>
                                     </>
                                 )}
-                                {panchayat && (
+                                {effectivePanchayat && (
                                     <>
                                         <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.65rem', opacity: 0.6 }}></i>
-                                        <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{panchayat} GP</span>
+                                        <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{effectivePanchayat} GP</span>
                                     </>
                                 )}
                             </div>

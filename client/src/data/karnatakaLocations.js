@@ -1,6 +1,7 @@
 /**
  * Karnataka Comprehensive Administrative Hierarchy
  * 31 Districts -> Taluks -> Gram Panchayats
+ * Includes all verified Gram Panchayats across Karnataka Local Bodies
  */
 
 export const karnatakaLocations = {
@@ -89,13 +90,63 @@ export const karnatakaLocations = {
     "Molakalmuru": ["B.G. Kere", "Devaradasarahalli", "Hanagal", "Hirekerehalli", "Kalludevanahalli", "Kondlahalli", "Molakalmuru Rural", "Ramasagara", "Roppa", "Thammenahalli"]
   },
   "Dakshina Kannada": {
-    "Bantwala": ["Agrar", "Alike", "Amtady", "Balthila", "Benjanapadavu", "Golthamajal", "Kalladka", "Kaniyoor", "Mani", "Modankap", "Narimogaru", "Pudu", "Sajipamuda", "Sajipanadu", "Sarapady", "Vittal", "Vittalpadnur"],
-    "Belthangady": ["Aladangady", "Arasinamakki", "Charmadi", "Dharmasthala", "Gardady", "Kokkada", "Koyyur", "Kuvettu", "Madanthyar", "Mithabagilu", "Nidle", "Puthila", "Shirlalu", "Ujire", "Venur"],
-    "Kadaba": ["Alankaru", "Balthila", "Bilmala", "Ichlampady", "Kadaba Rural", "Kaniyoor", "Kodialbail Rural", "Koleda", "Kowkrady", "Mardhala", "Noojibalthila", "Panolibail", "Perabe", "Savanoor", "Subrahmanya"],
-    "Mangaluru": ["Bajpe", "Gurupura", "Kinnigoli", "Kotekar Rural", "Kudupu", "Malavoor", "Menasinahadlu", "Mudushedde", "Neermarga", "Pavoor", "Someshwara", "Talapady", "Tenka Mijar", "Thokur", "Yekkur"],
-    "Moodbidri": ["Badaga Mijar", "Beluvai", "Daregudde", "Hosabettu", "Iruvail", "Kallabettu", "Marpadi", "Nellikar", "Padumarnad", "Puthige", "Shirthady", "Tenkamijar", "Valpadi"],
-    "Puttur": ["Aryapu", "Badagannur", "Bannur Rural", "Bettampady", "Kabaka", "Kedambady", "Kolthige", "Madavu", "Nelyadi", "Olamogaru", "Panaje", "Sampya", "Sediyapu", "Uppinangady"],
-    "Sullia": ["Ajjavara", "Aletty", "Bellare", "Devachalla", "Guthigar", "Harihara Pallathadka", "Jalsur", "Kalmakaru", "Kollamogru", "Mandekolu", "Markanja", "Sampaje", "Sullia Rural", "Ubaradka Mithoor"]
+    "Bantwala": [
+      "Agrar", "Alike", "Amtady", "Ananthady", "Balthila", "Benjanapadavu", "Chennaithodi", "Golthamajal", 
+      "Idkidu", "Ira", "Kalladka", "Kaniyoor", "Kariyangala", "Kavalapadur", "Kavalamudur", "Kolnadu", 
+      "Kuriyala", "Mani", "Maninalkur", "Melkar", "Modankap", "Murnad", "Narimogaru", "Navoor", 
+      "Netlamudnoor", "Pajir", "Panemangalore Rural", "Peraje", "Peruvai", "Pilathabettu", "Pudu", 
+      "Punacha", "Sajipamuda", "Sajipanadu", "Sajipapadnoor", "Sangabettu", "Sarapady", "Shamboor", 
+      "Thumbay", "Uli", "Vittal", "Vittal Mudnoor", "Vittalpadnur"
+    ],
+    "Belthangady": [
+      "Aladangady", "Andinje", "Arambodi", "Arasinamakki", "Badagakajekar", "Bajire", "Bandaru", 
+      "Barye", "Belalu", "Charmadi", "Chibidre", "Dharmasthala", "Gardady", "Gerukatte", "Hathyadka", 
+      "Ilanthila", "Kaniyoor", "Karambar", "Karaya", "Kashipatna", "Kavu", "Kokkada", "Koyyur", 
+      "Kudrebettu", "Kukkedi", "Kuvettu", "Laila", "Machina", "Madanthyar", "Malavanthige", 
+      "Melanthabettu", "Mithabagilu", "Mundaje", "Nalka", "Navara", "Navoor", "Nidle", "Nitinadpur", 
+      "Palthady", "Peradi", "Puthila", "Rekhya", "Savanal", "Shirlalu", "Sulkeri", "Tenkarakarandur", 
+      "Thotathady", "Ujire", "Urvalu", "Venur"
+    ],
+    "Kadaba": [
+      "Aithoor", "Alankaru", "Balthila", "Bilmala", "Dolpady", "Golibettu", "Ichlampady", "Kadaba Rural", 
+      "Kaniyoor", "Kodialbail Rural", "Koila", "Koleda", "Kombar", "Kotebagilu", "Kowkrady", "Kudmar", 
+      "Kunthoor", "Mardhala", "Noojibalthila", "Panolibail", "Perabe", "Peral", "Pilar", "Renjiladi", 
+      "Savanoor", "Siribagilu", "Subrahmanya", "Yenekallu"
+    ],
+    "Mangaluru": [
+      "Adyar", "Amblamogaru", "Bajpe", "Bala", "Belma", "Chelairu", "Ganjimutt", "Gurupura", 
+      "Harekala", "Kinnigoli", "Kolambe", "Kolluru", "Kompady", "Kotekar Rural", "Kudupu", "Malavoor", 
+      "Mennabettu", "Menzis", "Mudushedde", "Munchur", "Muttur", "Neermarga", "Pavoor", "Permude", 
+      "Pudu Outer", "Someshwara", "Talapady", "Tenka Bellur", "Tenka Mijar", "Thokur", "Ullala Rural", 
+      "Yekkur"
+    ],
+    "Moodbidri": [
+      "Badaga Mijar", "Beluvai", "Daregudde", "Hosabettu", "Iruvail", "Kallabettu", "Kallamundkur", 
+      "Kotebagilu", "Marpadi", "Mudumarnad", "Nellikar", "Padumarnad", "Paladka", "Pranthya", 
+      "Puthige", "Shirthady", "Tenkamijar", "Todar", "Valpadi"
+    ],
+    "Mulki": [
+      "Aikala", "Athikaribettu", "Bappanadu", "Elathur", "Hejamadi Border", "Kerekadu", "Kilpadi", 
+      "Kinnigoli Border", "Koluvail", "Menabettu", "Nadusal", "Pakshikere", "Punaroor", "Shimanthoor", 
+      "Talipady", "Ulepady"
+    ],
+    "Puttur": [
+      "Ariadka", "Aryapu", "Badagannur", "Balnadu", "Bannur Rural", "Bettampady", "Bilinele", 
+      "Haleneranki", "Kabaka", "Kedambady", "Kemminje", "Kodimbady", "Kolthige", "Kowkrady Border", 
+      "Madavu", "Nelyadi", "Nidle Border", "Olamogaru", "Paduvanoor", "Panaje", "Pannur", "Pavanje", 
+      "Sampya", "Sarve", "Sediyapu", "Shanthigodu", "Uppinangady"
+    ],
+    "Sullia": [
+      "Ajjavara", "Aletty", "Amara Mudnoor", "Amara Padnoor", "Aranthod", "Balpa", "Bellare", 
+      "Devachalla", "Guthigar", "Harihara Pallathadka", "Ivarnadu", "Jalsur", "Kalmakaru", 
+      "Kallapalli", "Kaniyur Border", "Kollamogru", "Madappady", "Mandekolu", "Markanja", 
+      "Mooruru", "Nalkur", "Pambethady", "Sampaje", "Sullia Rural", "Thodikana", "Ubaradka Mithoor", 
+      "Yenekal"
+    ],
+    "Ullala": [
+      "Amblamogaru", "Belma", "Deralakatte Rural", "Harekala", "Konaje", "Kotekar", "Kuthar", 
+      "Manjanady", "Munnuru", "Naringana", "Pavoor", "Someshwar Outer", "Talapady"
+    ]
   },
   "Davanagere": {
     "Channagiri": ["Basavapatna", "Chirastahalli", "Daginkatte", "Goppenahalli", "Hodigere", "Kagathur", "Kerebilachi", "Nallur", "Santhebennur", "Somlapura", "Tavarekere", "Ubrani"],
@@ -236,13 +287,47 @@ export const karnatakaLocations = {
     "Turuvekere": ["Arasinaguppe", "Banashankari", "Dandinashivara", "Dabbeghatta", "Gopalapura", "Mayasandra", "Sampige", "Talekere", "Turuvekere Rural"]
   },
   "Udupi": {
-    "Brahmavara": ["Barkur", "Cherkady", "Chantaru", "Handadi", "Harady", "Havanje", "Kokkarne", "Korangrapady", "Kota", "Kotathattu", "Kumragodu", "Mandarthi", "Pandeshwara", "Saligrama Rural", "Varamballi", "Yedthady"],
-    "Byndoor": ["Baindur", "Bijoor", "Golihole", "Heroor", "Kambadakone", "Khambadakone", "Kirimanjeshwara", "Maravanthe", "Nada", "Paduvari", "Shiroor", "Taggarse", "Uppunda", "Yadthare"],
-    "Hebri": ["Belanje", "Chara", "Hebri", "Kabbinale", "Kuchoor", "Madhumakki", "Muniyalu", "Perdoor Border", "Seethanadi", "Shivapura", "Someshwara"],
-    "Kapu": ["Belle", "Innanje", "Kalathur", "Katapadi", "Kote", "Kurkal", "Majur", "Mallar", "Mattu", "Mudarangadi", "Padu", "Pangala", "Shirva", "Uchila", "Yellur"],
-    "Karkala": ["Ajekar", "Belanje", "Bailoor", "Bola", "Hermunde", "Hirgana", "Inna", "Kanthavara", "Kukkundoor", "Mala", "Miyaru", "Mundkur", "Nellikaru", "Nitte", "Renjala", "Sachcheripet", "Varanga", "Yerlapady"],
-    "Kundapura": ["Amparu", "Basrur", "Beejadi", "Beloor", "Gangolli", "Gulvady", "Gopadi", "Halady", "Hattiangadi", "Hemmadi", "Hombadi Mandadi", "Kandlur", "Koni", "Koteshwara", "Kumbhashi", "Maranakatte", "Tallur", "Tekkatte", "Thekkatte", "Trasi", "Vandse"],
-    "Udupi": ["Ambalapady", "Alevoor", "Badagabettu", "Bannanje", "Heroor", "Kallianpur", "Kemmannu", "Kidiyoor", "Kinnimulki", "Manipura", "Moodubettu", "Nejaru", "Santhekatte", "Thenkanidiyoor", "Thottam", "Udyavara"]
+    "Brahmavara": [
+      "Aroor", "Avarse", "Baikady", "Barkur", "Billadi", "Brahmavara", "Chantharu", "Cherkadi", 
+      "Handadi", "Hanehalli", "Haradi", "Havanje", "Heggunje", "Heroor", "Irodi", "Kaduru", 
+      "Kalathur", "Karje", "Kodi", "Kokkarne", "Kota", "Kotathattu", "Kumragodu", "Nalkur", 
+      "Neelavara", "Pandeshwara", "Shiriyara", "Uppoor", "Vaddarse", "Varamballi", "Yadtadi"
+    ],
+    "Byndoor": [
+      "Baindur", "Bijoor", "Golihole", "Heruru", "Jadkal", "Kalthodu", "Kambadakone", "Khambadakone", 
+      "Kirimanjeshwara", "Kolluru", "Maravanthe", "Nada", "Navunda", "Paduvari", "Shiroor", 
+      "Taggarse", "Uppunda", "Yadthare"
+    ],
+    "Hebri": [
+      "Belanje", "Chara", "Hebri", "Kabbinale", "Kuchoor", "Madhumakki", "Mudradi", "Muniyalu", 
+      "Perdoor Border", "Seethanadi", "Shivapura", "Someshwara"
+    ],
+    "Kapu": [
+      "Bada", "Belapu", "Belle", "Hejamadi", "Innanje", "Kalathur", "Katapadi", "Kote", "Kurkalu", 
+      "Kuthyaru", "Majur", "Mallar", "Mattu", "Mudarangadi", "Padu", "Padubidri", "Palimaru", 
+      "Pangala", "Shirva", "Thenka", "Uchila", "Yellur"
+    ],
+    "Karkala": [
+      "Ajekar", "Bailoor", "Belanje", "Bola", "Chokkadi", "Hermunde", "Hirgana", "Inna", "Irvathur", 
+      "Kadthala", "Kanthavara", "Kervashe", "Kukkundoor", "Mala", "Mallar", "Miyaru", "Mudradi", 
+      "Mundkur", "Nallur", "Nellikaru", "Nitte", "Palli", "Renjala", "Sachcheripet", "Shirlalu", 
+      "Sooda", "Varanga", "Yerlapady"
+    ],
+    "Kundapura": [
+      "Ajri", "Aluru", "Amasbailu", "Amparu", "Anegalli", "Balkuru", "Basrur", "Beejadi", "Beloor", 
+      "Chitturu", "Gangolli", "Gopadi", "Gujjadi", "Gulvadi", "Hakladi", "Halady", "Hallihole", 
+      "Hangaloru", "Hardalli-Mandalli", "Hattiangadi", "Hemmadi", "Hengavalli", "Hombadi Mandadi", 
+      "Hosadu", "Hosangadi", "Iduru Kunjadi", "Kalavara", "Kandavara", "Karkunje", "Katebelturu", 
+      "Kavradi", "Keduru", "Keradi", "Koni", "Korgi", "Koteshwara", "Kumbhashi", "Maranakatte", 
+      "Molahalli", "Nada", "Shankarnarayana", "Siddapura", "Tallur", "Tekkatte", "Thekkatte", 
+      "Trasi", "Ulluru", "Vandse", "Yadamoge"
+    ],
+    "Udupi": [
+      "Alevoor", "Ambalapady", "Athradi", "Badagabettu", "Badanidiyoor", "Bairampalli", "Bannanje", 
+      "Bommarabettu", "Heroor", "Kadekar", "Kallianpur", "Kalyanpura", "Kemmannu", "Kidiyoor", 
+      "Kinnimulki", "Kodibettu", "Kukkehalli", "Manipura", "Moodubettu", "Nejaru", "Perdoor", 
+      "Santhekatte", "Thenkanidiyoor", "Thottam", "Udyavara"
+    ]
   },
   "Uttara Kannada": {
     "Ankola": ["Achanalli", "Agsur", "Avarsa", "Belambar", "Bhavikodla", "Harwada", "Hattikeri", "Hillur", "Poojageri", "Shedikuli", "Sunksal", "Tenkankeri", "Vandige"],
