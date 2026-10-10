@@ -1,10 +1,10 @@
 const { GoogleGenAI } = require('@google/genai');
 
 const PRIMARY_MODELS = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b'
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-3.7-flash'
 ];
 
 // Helper: Call promise with timeout
@@ -251,6 +251,13 @@ async function checkImageVisualMatch(imageABase64, imageBBase64) {
     if (!imageABase64 || !imageBBase64) return false;
     const cleanA = imageABase64.replace(/^data:image\/\w+;base64,/, '');
     const cleanB = imageBBase64.replace(/^data:image\/\w+;base64,/, '');
+
+    // Fast-path: Identical photo / identical byte stream is 100% the same defect
+    if (cleanA === cleanB) {
+        console.log('[VisionEngine] 🔍 Visual Duplicate Check: Exact identical photo byte-stream match detected (100% same defect).');
+        return true;
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey || apiKey.trim() === '') return false;

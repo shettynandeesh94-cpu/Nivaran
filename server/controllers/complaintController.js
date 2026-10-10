@@ -94,10 +94,16 @@ exports.createComplaint = async (req, res) => {
 
         let existingDuplicate = null;
 
-        // 1. AI Visual Comparison: Only merge if AI confirms it is the EXACT SAME physical defect
+        // 1. Fast Path: Byte-for-byte identical photo match or AI Visual Match
         if (attachment) {
             for (const c of openComplaints) {
                 if (c.attachment) {
+                    // Check direct byte equality first (instant 0ms)
+                    if (c.attachment === attachment) {
+                        existingDuplicate = c;
+                        break;
+                    }
+                    // Next, check AI Visual Forensic Match
                     const isVisualMatch = await checkImageVisualMatch(attachment, c.attachment);
                     if (isVisualMatch) {
                         existingDuplicate = c;
@@ -107,7 +113,26 @@ exports.createComplaint = async (req, res) => {
             }
         }
 
-        // 2. Strict text fallback (only if both complaints lack photos and have identical specific titles)
+        // 2. High-Precision GPS Proximity Check (Within 50 meters in same category & ward)
+        if (!existingDuplicate && location && location.latitude && location.longitude) {
+            for (const c of openComplaints) {
+                if (c.location && c.location.latitude && c.location.longitude) {
+                    const distance = calculateDistanceMeters(
+                        location.latitude,
+                        location.longitude,
+                        c.location.latitude,
+                        c.location.longitude
+                    );
+                    if (distance !== null && distance <= 50) {
+                        // Found within 50 meters in same category & ward
+                        existingDuplicate = c;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. Strict text fallback (only if both complaints lack photos and have identical specific titles)
         if (!existingDuplicate && !attachment) {
             const cleanTitle = (title || '').toLowerCase().trim();
             for (const c of openComplaints) {
