@@ -1,14 +1,14 @@
 const { GoogleGenAI } = require('@google/genai');
 
 const PRIMARY_MODELS = [
-    'gemini-3.5-flash',
     'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
     'gemini-3.8-flash',
     'gemini-3.7-flash'
 ];
 
 // Helper: Call promise with timeout
-function withTimeout(promise, ms = 8000) {
+function withTimeout(promise, ms = 12000) {
     return Promise.race([
         promise,
         new Promise((_, reject) => setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms))
@@ -89,7 +89,7 @@ Respond ONLY with valid JSON.
                 }
             });
 
-            const response = await withTimeout(generatePromise, 7000);
+            const response = await withTimeout(generatePromise, 12000);
 
             const text = response.text ? response.text.trim() : '';
             const cleanedText = text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();

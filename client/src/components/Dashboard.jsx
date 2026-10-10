@@ -252,9 +252,9 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             setIsAnalyzingAi(true);
             showToast('🤖 AI Vision inspecting photo in high speed...', 'info');
 
-            // Timeout promise (max 8 seconds)
+            // Timeout promise (max 20 seconds)
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('AI inspection timeout')), 8000)
+                setTimeout(() => reject(new Error('AI inspection timeout')), 20000)
             );
 
             const apiPromise = api.aiAnalyzeImage(compressedBase64, 'image/jpeg');
