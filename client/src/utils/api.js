@@ -201,6 +201,32 @@ export const api = {
         });
     },
 
+    getTechnicians: async () => {
+        return await request('/technicians', {
+            method: 'GET',
+        });
+    },
+
+    addTechnician: async (technicianData) => {
+        return await request('/technicians', {
+            method: 'POST',
+            body: JSON.stringify(technicianData),
+        });
+    },
+
+    deleteTechnician: async (id) => {
+        return await request(`/technicians/${id}`, {
+            method: 'DELETE',
+        });
+    },
+
+    assignTechnician: async (complaintId, technicianId) => {
+        return await request(`/technicians/assign/${complaintId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ technicianId }),
+        });
+    },
+
     getToken,
     getUser,
 };

@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const authRoutes = require('./routes/authRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
+const technicianRoutes = require('./routes/technicianRoutes');
 const startEscalationJob = require('./utils/escalationJob');
 
 const seedData = require('./utils/seedData');
@@ -33,6 +34,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/budget', budgetRoutes);
+app.use('/api/technicians', technicianRoutes);
 
 // Root route handler
 app.get('/', (req, res) => {

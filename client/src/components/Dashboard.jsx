@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { SmartEngine } from '../utils/smartEngine';
 import { getAssignedTechnician } from '../utils/technicians';
 import { CityMapView } from './CityMapView';
+import { AddTechnicianModal } from './AddTechnicianModal';
 
 // --- SUB-COMPONENT: REAL-TIME INDIVIDUAL CELL COUNTDOWN TIMER ---
 const SlaCountdownCell = ({ deadline, status }) => {
@@ -64,6 +65,13 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [reqReason, setReqReason] = useState('');
     const [submittingReq, setSubmittingReq] = useState(false);
     const [adminNotesMap, setAdminNotesMap] = useState({});
+
+    // Technician states (Corporator / Admin)
+    const [technicians, setTechnicians] = useState([]);
+    const [loadingTechs, setLoadingTechs] = useState(false);
+    const [isAddTechModalOpen, setIsAddTechModalOpen] = useState(false);
+    const [techSearch, setTechSearch] = useState('');
+    const [techFilterSpec, setTechFilterSpec] = useState('');
 
     // File complaint states
     const [title, setTitle] = useState('');
@@ -358,6 +366,54 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
         }
     }, [activeTab, refreshKey, user]);
 
+    // Fetch Field Technicians when technician or overview tab is active
+    const loadTechniciansData = async () => {
+        if (!user || (user.role !== 'corporator' && user.role !== 'admin')) return;
+        try {
+            setLoadingTechs(true);
+            const res = await api.getTechnicians();
+            if (res && res.technicians) {
+                setTechnicians(res.technicians);
+            }
+        } catch (err) {
+            console.error('Error fetching technicians:', err);
+        } finally {
+            setLoadingTechs(false);
+        }
+    };
+
+    useEffect(() => {
+        if (user && (user.role === 'corporator' || user.role === 'admin') && 
+            (activeTab === 'tab-technicians' || activeTab === 'tab-overview')) {
+            loadTechniciansData();
+        }
+    }, [activeTab, refreshKey, user]);
+
+    const handleDeleteTechnician = async (techId, techName) => {
+        if (!window.confirm(`Are you sure you want to remove technician ${techName}? Any open tickets assigned to them will be unassigned.`)) {
+            return;
+        }
+        try {
+            await api.deleteTechnician(techId);
+            showToast(`Technician ${techName} removed from roster.`, 'info');
+            loadTechniciansData();
+        } catch (err) {
+            showToast(err.message || 'Failed to remove technician', 'error');
+        }
+    };
+
+    const filteredTechnicians = useMemo(() => {
+        return technicians.filter(t => {
+            const matchesSearch = !techSearch ||
+                t.name.toLowerCase().includes(techSearch.toLowerCase()) ||
+                (t.email && t.email.toLowerCase().includes(techSearch.toLowerCase())) ||
+                (t.phone && t.phone.toLowerCase().includes(techSearch.toLowerCase())) ||
+                (t.ward && t.ward.toLowerCase().includes(techSearch.toLowerCase()));
+            const matchesSpec = !techFilterSpec || t.specialization === techFilterSpec;
+            return matchesSearch && matchesSpec;
+        });
+    }, [technicians, techSearch, techFilterSpec]);
+
     // Live Smart Engine Trigger inside textbox change
     const handleDescriptionChange = (val) => {
         setDescription(val);
@@ -517,6 +573,15 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                 <i className="fa-solid fa-circle-plus"></i> Submit Complaint
                             </button>
                         )}
+
+                        {(user?.role === 'corporator' || user?.role === 'admin') && (
+                            <button 
+                                className={`nav-tab-btn ${activeTab === 'tab-technicians' ? 'active' : ''}`}
+                                onClick={() => switchTab('tab-technicians')}
+                            >
+                                <i className="fa-solid fa-helmet-safety"></i> Field Technicians
+                            </button>
+                        )}
                         
                         <button 
                             className={`nav-tab-btn ${activeTab === 'tab-all-complaints' ? 'active' : ''}`}
@@ -556,6 +621,16 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                     <button className="btn btn-primary" onClick={() => switchTab('tab-new-complaint')}>
                                         <i className="fa-solid fa-plus"></i> File Complaint
                                     </button>
+                                )}
+                                {(user?.role === 'corporator' || user?.role === 'admin') && (
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button className="btn btn-secondary" onClick={() => switchTab('tab-technicians')}>
+                                            <i className="fa-solid fa-helmet-safety"></i> Field Technicians
+                                        </button>
+                                        <button className="btn btn-primary" onClick={() => setIsAddTechModalOpen(true)}>
+                                            <i className="fa-solid fa-user-plus"></i> Add Technician
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
@@ -1348,9 +1423,227 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                             </div>
                         </div>
                     )}
+
+                    {/* View: Field Technicians Management (Corporator / Admin) */}
+                    {activeTab === 'tab-technicians' && (user?.role === 'corporator' || user?.role === 'admin') && (
+                        <div id="tab-technicians">
+                            <div className="dashboard-header-row">
+                                <div>
+                                    <h2 className="dashboard-title">
+                                        <i className="fa-solid fa-helmet-safety" style={{ color: 'var(--secondary)', marginRight: '10px' }}></i>
+                                        Field Technicians Roster
+                                    </h2>
+                                    <p className="dashboard-subtitle">
+                                        Manage and deploy on-duty municipal field workers for zero-touch grievance resolution in your ward.
+                                    </p>
+                                </div>
+                                <button className="btn btn-primary" onClick={() => setIsAddTechModalOpen(true)}>
+                                    <i className="fa-solid fa-user-plus"></i> Add New Technician
+                                </button>
+                            </div>
+
+                            {/* Technicians Stats Banner */}
+                            <div className="stats-row">
+                                <div className="mini-stat-card">
+                                    <div className="mini-stat-info">
+                                        <span className="mini-stat-label">On-Duty Technicians</span>
+                                        <span className="mini-stat-value">{technicians.length}</span>
+                                    </div>
+                                    <div className="mini-stat-icon purple"><i className="fa-solid fa-users-gear"></i></div>
+                                </div>
+                                <div className="mini-stat-card">
+                                    <div className="mini-stat-info">
+                                        <span className="mini-stat-label">Active Workload</span>
+                                        <span className="mini-stat-value">
+                                            {technicians.reduce((sum, t) => sum + (t.activeTasks || 0), 0)}
+                                        </span>
+                                    </div>
+                                    <div className="mini-stat-icon warning"><i className="fa-solid fa-screwdriver-wrench"></i></div>
+                                </div>
+                                <div className="mini-stat-card">
+                                    <div className="mini-stat-info">
+                                        <span className="mini-stat-label">Verified Fixes</span>
+                                        <span className="mini-stat-value">
+                                            {technicians.reduce((sum, t) => sum + (t.resolvedTasks || 0), 0)}
+                                        </span>
+                                    </div>
+                                    <div className="mini-stat-icon success"><i className="fa-solid fa-circle-check"></i></div>
+                                </div>
+                                <div className="mini-stat-card">
+                                    <div className="mini-stat-info">
+                                        <span className="mini-stat-label">Specialist Divisions</span>
+                                        <span className="mini-stat-value">
+                                            {new Set(technicians.map(t => t.specialization).filter(Boolean)).size || 5}
+                                        </span>
+                                    </div>
+                                    <div className="mini-stat-icon info"><i className="fa-solid fa-diagram-project"></i></div>
+                                </div>
+                            </div>
+
+                            {/* Search and Filters Bar */}
+                            <div className="filters-panel" style={{ marginTop: '20px' }}>
+                                <div className="search-box">
+                                    <i className="fa-solid fa-magnifying-glass"></i>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search technician by name, phone, ward..." 
+                                        value={techSearch}
+                                        onChange={(e) => setTechSearch(e.target.value)}
+                                    />
+                                    {techSearch && (
+                                        <button className="clear-search-btn" onClick={() => setTechSearch('')}>
+                                            <i className="fa-solid fa-xmark"></i>
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="filter-group">
+                                    <label><i className="fa-solid fa-filter"></i> Specialization:</label>
+                                    <select 
+                                        value={techFilterSpec} 
+                                        onChange={(e) => setTechFilterSpec(e.target.value)}
+                                        className="filter-select"
+                                    >
+                                        <option value="">All Divisions</option>
+                                        <option value="Roads">Roads & Potholes</option>
+                                        <option value="Streetlights">Streetlights & Electrical</option>
+                                        <option value="Water Supply">Water Supply & Sewage</option>
+                                        <option value="Sanitation">Sanitation & Waste</option>
+                                        <option value="Health">Public Health</option>
+                                        <option value="General">General Maintenance</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Technicians Grid View */}
+                            {loadingTechs ? (
+                                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
+                                    <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2rem', color: 'var(--secondary)', marginBottom: '12px' }}></i>
+                                    <p>Loading field technicians roster...</p>
+                                </div>
+                            ) : filteredTechnicians.length === 0 ? (
+                                <div className="content-panel" style={{ textAlign: 'center', padding: '60px 20px', marginTop: '20px' }}>
+                                    <div style={{ fontSize: '3rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                                        <i className="fa-solid fa-user-slash"></i>
+                                    </div>
+                                    <h3>No Field Technicians Found</h3>
+                                    <p style={{ color: 'var(--text-secondary)', maxWidth: '460px', margin: '0 auto 20px' }}>
+                                        {techSearch || techFilterSpec 
+                                            ? 'No technicians match your search or filter criteria. Try clearing filters.' 
+                                            : 'No technicians have been onboarded for your ward yet. Click below to add your first field technician!'}
+                                    </p>
+                                    <button className="btn btn-primary" onClick={() => setIsAddTechModalOpen(true)}>
+                                        <i className="fa-solid fa-user-plus"></i> Add First Technician
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="technicians-grid">
+                                    {filteredTechnicians.map(tech => {
+                                        const specLower = (tech.specialization || '').toLowerCase();
+                                        let avatarClass = 'roads';
+                                        let avatarIcon = 'fa-road';
+                                        let specLabel = tech.specialization || 'General Infrastructure';
+
+                                        if (specLower.includes('light') || specLower.includes('electr')) {
+                                            avatarClass = 'streetlights';
+                                            avatarIcon = 'fa-lightbulb';
+                                        } else if (specLower.includes('water') || specLower.includes('pipe') || specLower.includes('sewage')) {
+                                            avatarClass = 'water';
+                                            avatarIcon = 'fa-faucet-drip';
+                                        } else if (specLower.includes('sanitat') || specLower.includes('waste') || specLower.includes('garbage') || specLower.includes('drain')) {
+                                            avatarClass = 'sanitation';
+                                            avatarIcon = 'fa-broom';
+                                        } else if (specLower.includes('health') || specLower.includes('hospital')) {
+                                            avatarClass = 'health';
+                                            avatarIcon = 'fa-heart-pulse';
+                                        }
+
+                                        return (
+                                            <div key={tech._id} className="technician-card">
+                                                <div className="technician-card-header">
+                                                    <div className={`technician-avatar ${avatarClass}`}>
+                                                        <i className={`fa-solid ${avatarIcon}`}></i>
+                                                    </div>
+                                                    <div className="technician-meta">
+                                                        <h4 className="technician-name" title={tech.name}>{tech.name}</h4>
+                                                        <span className="technician-status-badge">
+                                                            <span className="technician-status-dot"></span> On-Duty
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="technician-spec-pill">
+                                                    <i className={`fa-solid ${avatarIcon}`}></i>
+                                                    <span>{specLabel}</span>
+                                                </div>
+
+                                                <div className="technician-info-list">
+                                                    <div className="technician-info-item">
+                                                        <i className="fa-solid fa-location-dot" style={{ color: 'var(--secondary)', width: '16px' }}></i>
+                                                        <span>{tech.ward || tech.panchayat || 'General Ward'}</span>
+                                                    </div>
+                                                    {tech.phone && (
+                                                        <div className="technician-info-item">
+                                                            <i className="fa-solid fa-phone" style={{ color: '#10b981', width: '16px' }}></i>
+                                                            <a href={`tel:${tech.phone}`}>{tech.phone}</a>
+                                                        </div>
+                                                    )}
+                                                    <div className="technician-info-item">
+                                                        <i className="fa-solid fa-envelope" style={{ color: '#818cf8', width: '16px' }}></i>
+                                                        <a href={`mailto:${tech.email}`} title={tech.email} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {tech.email}
+                                                        </a>
+                                                    </div>
+                                                </div>
+
+                                                <div className="technician-stats-row">
+                                                    <div className="technician-stat-box">
+                                                        <div className="technician-stat-val active-val">{tech.activeTasks || 0}</div>
+                                                        <div className="technician-stat-lbl">Active Tasks</div>
+                                                    </div>
+                                                    <div className="technician-stat-box">
+                                                        <div className="technician-stat-val resolved-val">{tech.resolvedTasks || 0}</div>
+                                                        <div className="technician-stat-lbl">Resolved</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="technician-card-footer">
+                                                    {tech.phone ? (
+                                                        <a href={`tel:${tech.phone}`} className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '0.78rem' }}>
+                                                            <i className="fa-solid fa-phone"></i> Call
+                                                        </a>
+                                                    ) : <span></span>}
+
+                                                    <button 
+                                                        className="btn btn-outline btn-sm" 
+                                                        style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                                        onClick={() => handleDeleteTechnician(tech._id, tech.name)}
+                                                        title="Remove from roster"
+                                                    >
+                                                        <i className="fa-solid fa-trash"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     
                 </div>
             </div>
+
+            {/* Onboard Technician Modal for Corporator / Admin */}
+            <AddTechnicianModal
+                isOpen={isAddTechModalOpen}
+                onClose={() => setIsAddTechModalOpen(false)}
+                onTechnicianAdded={() => {
+                    loadTechniciansData();
+                }}
+                showToast={showToast}
+                user={user}
+            />
 
             {/* Fixed Mobile Bottom App Navigation Bar */}
             <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
@@ -1373,6 +1666,17 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                             <i className="fa-solid fa-plus"></i>
                         </div>
                         <span>File Issue</span>
+                    </button>
+                )}
+
+                {(user?.role === 'corporator' || user?.role === 'admin') && (
+                    <button 
+                        type="button"
+                        className={`mobile-nav-item ${activeTab === 'tab-technicians' ? 'active' : ''}`}
+                        onClick={() => { switchTab('tab-technicians'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    >
+                        <i className="fa-solid fa-helmet-safety"></i>
+                        <span>Technicians</span>
                     </button>
                 )}
                 

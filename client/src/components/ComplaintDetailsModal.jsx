@@ -35,6 +35,10 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
     const [isDetectingGps, setIsDetectingGps] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
+    // Technician Assignment states (Corporator / Admin)
+    const [availableTechnicians, setAvailableTechnicians] = useState([]);
+    const [isReassigning, setIsReassigning] = useState(false);
+
     // Fetch Details on Open/ID change
     useEffect(() => {
         if (!isOpen || !complaintId) return;
@@ -50,6 +54,14 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                 if (data.extensionRequest?.daysRequested) {
                     setAdminAddDays(data.extensionRequest.daysRequested.toString());
                 }
+
+                // If corporator/admin, fetch technicians for re-assignment
+                if (user && (user.role === 'corporator' || user.role === 'admin')) {
+                    const techRes = await api.getTechnicians();
+                    if (techRes && techRes.technicians) {
+                        setAvailableTechnicians(techRes.technicians);
+                    }
+                }
             } catch (err) {
                 showToast(err.message || 'Error loading details', 'error');
                 onClose();
@@ -59,7 +71,23 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
         };
 
         fetchDetails();
-    }, [isOpen, complaintId]);
+    }, [isOpen, complaintId, user]);
+
+    const handleReassignTechnician = async (techId) => {
+        try {
+            setIsReassigning(true);
+            const res = await api.assignTechnician(complaint._id, techId);
+            if (res.success) {
+                setComplaint(res.complaint);
+                showToast(res.message || 'Field technician assigned successfully!', 'success');
+                if (refreshDashboard) refreshDashboard();
+            }
+        } catch (err) {
+            showToast(err.message || 'Failed to assign technician.', 'error');
+        } finally {
+            setIsReassigning(false);
+        }
+    };
 
     // Live Countdown Timer Loop
     useEffect(() => {
@@ -736,28 +764,49 @@ export const ComplaintDetailsModal = ({ isOpen, onClose, complaintId, showToast,
                                             {complaint.department?.name || 'Unassigned'}
                                         </span>
                                     </div>
-                                    <div className="detail-meta-item">
-                                        <span className="detail-meta-label">Assigned Technician:</span>
-                                        <span className="detail-meta-val">
-                                            {(() => {
-                                                const tech = getAssignedTechnician(complaint);
-                                                return tech ? (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-                                                        <span style={{ fontWeight: 600, color: 'var(--secondary)' }}>
-                                                            <i className="fa-solid fa-user-gear"></i> {tech.name}
-                                                        </span>
-                                                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                                                            {tech.specialization} • {tech.phone}
-                                                        </span>
-                                                        <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', padding: '1px 6px', borderRadius: '4px', marginTop: '2px' }}>
-                                                            ⚡ Auto-Dispatched
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-muted">Unassigned</span>
-                                                );
-                                            })()}
-                                        </span>
+                                    <div className="detail-meta-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '6px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span className="detail-meta-label">Assigned Technician:</span>
+                                            <span className="detail-meta-val">
+                                                {(() => {
+                                                    const tech = getAssignedTechnician(complaint);
+                                                    return tech ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                                                            <span style={{ fontWeight: 600, color: 'var(--secondary)' }}>
+                                                                <i className="fa-solid fa-user-gear"></i> {tech.name}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                                                {tech.specialization} • {tech.phone}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.68rem', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', padding: '1px 6px', borderRadius: '4px', marginTop: '2px' }}>
+                                                                ⚡ Auto-Dispatched
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted">Unassigned</span>
+                                                    );
+                                                })()}
+                                            </span>
+                                        </div>
+
+                                        {/* Corporator / Admin: Reassign Technician Dropdown */}
+                                        {(user?.role === 'corporator' || user?.role === 'admin') && complaint.status !== 'RESOLVED' && availableTechnicians.length > 0 && (
+                                            <div style={{ marginTop: '4px' }}>
+                                                <select
+                                                    className="reassign-tech-select"
+                                                    value={complaint.assignedTo?._id || ''}
+                                                    onChange={(e) => handleReassignTechnician(e.target.value)}
+                                                    disabled={isReassigning}
+                                                >
+                                                    <option value="">-- Reassign to Technician --</option>
+                                                    {availableTechnicians.map(t => (
+                                                        <option key={t._id} value={t._id}>
+                                                            {t.name} ({t.specialization} • {t.ward || 'General'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="detail-meta-item">
                                         <span className="detail-meta-label">Complaint ID:</span>
