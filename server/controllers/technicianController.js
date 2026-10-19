@@ -51,34 +51,53 @@ exports.addTechnician = async (req, res) => {
             taluk,
             panchayat,
             password
-        } = req.body;
+        } = req.body || {};
 
-        if (!name || !email || !specialization) {
-            return res.status(400).json({ message: 'Name, email, and specialization are required fields.' });
+        const nameStr = String(name || '').trim();
+        const emailStr = String(email || '').trim().toLowerCase();
+        const phoneStr = String(phone || '').trim();
+        const specStr = String(specialization || '').trim();
+        const passStr = password && String(password).trim() ? String(password).trim() : 'password123';
+
+        if (!nameStr) {
+            return res.status(400).json({ message: 'Technician name is required.' });
         }
 
-        const normalizedEmail = email.trim().toLowerCase();
-        const existing = await User.findOne({ email: normalizedEmail });
+        if (!emailStr || !emailStr.includes('@')) {
+            return res.status(400).json({ message: 'A valid official email address is required.' });
+        }
+
+        if (!specStr) {
+            return res.status(400).json({ message: 'Department specialization is required.' });
+        }
+
+        // Case-insensitive check to prevent duplicate emails
+        const existing = await User.findOne({
+            email: { $regex: new RegExp(`^${emailStr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
+        });
         if (existing) {
-            return res.status(400).json({ message: 'A user or technician with this email already exists.' });
+            return res.status(400).json({ message: `A user or technician with email "${emailStr}" already exists.` });
         }
 
-        const defaultPass = password && password.trim() ? password.trim() : 'password123';
-        const hashedPassword = await bcrypt.hash(defaultPass, 10);
+        const hashedPassword = await bcrypt.hash(passStr, 10);
 
         // Auto-assign ward from corporator context if not explicitly provided
-        const effectiveWard = ward || panchayat || req.user.ward || req.user.panchayat || 'General Ward';
-        const effectiveDistrict = district || req.user.district || '';
-        const effectiveTaluk = taluk || req.user.taluk || '';
-        const effectivePanchayat = panchayat || req.user.panchayat || '';
+        const effectiveWard = (ward && String(ward).trim()) || 
+                              (panchayat && String(panchayat).trim()) || 
+                              req.user?.ward || 
+                              req.user?.panchayat || 
+                              'General Ward';
+        const effectiveDistrict = (district && String(district).trim()) || req.user?.district || '';
+        const effectiveTaluk = (taluk && String(taluk).trim()) || req.user?.taluk || '';
+        const effectivePanchayat = (panchayat && String(panchayat).trim()) || req.user?.panchayat || '';
 
         const newTech = new User({
-            name: name.trim(),
-            email: normalizedEmail,
-            phone: phone ? phone.trim() : '',
+            name: nameStr,
+            email: emailStr,
+            phone: phoneStr,
             password: hashedPassword,
             role: 'technician',
-            specialization: specialization.trim(),
+            specialization: specStr,
             ward: effectiveWard,
             district: effectiveDistrict,
             taluk: effectiveTaluk,
@@ -88,7 +107,8 @@ exports.addTechnician = async (req, res) => {
 
         await newTech.save();
 
-        console.log(`[TechnicianEngine] 👷 Added New Field Technician: "${newTech.name}" (${newTech.specialization}) for ward "${newTech.ward}" by ${req.user.name}`);
+        const creatorName = req.user?.name || req.user?.email || 'Municipal Authority';
+        console.log(`[TechnicianEngine] 👷 Added New Field Technician: "${newTech.name}" (${newTech.specialization}) for ward "${newTech.ward}" by ${creatorName}`);
 
         const responseTech = newTech.toObject();
         delete responseTech.password;
@@ -104,7 +124,25 @@ exports.addTechnician = async (req, res) => {
         });
     } catch (err) {
         console.error('Error in addTechnician:', err);
-        res.status(500).json({ message: 'Failed to create field technician', error: err.message });
+        // Duplicate key error in MongoDB
+        if (err.code === 11000) {
+            return res.status(400).json({
+                message: 'A user or technician with this email address already exists.',
+                error: err.message
+            });
+        }
+        // Mongoose Schema Validation error
+        if (err.name === 'ValidationError') {
+            const validationMsg = Object.values(err.errors || {}).map(e => e.message).join(', ') || 'Validation error';
+            return res.status(400).json({
+                message: validationMsg,
+                error: err.message
+            });
+        }
+        res.status(500).json({ 
+            message: 'Failed to create field technician due to server error. Please try again.', 
+            error: err.message 
+        });
     }
 };
 

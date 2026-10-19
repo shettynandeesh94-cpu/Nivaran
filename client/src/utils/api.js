@@ -55,7 +55,12 @@ const request = async (endpoint, options = {}) => {
                 clearUser();
                 window.dispatchEvent(new Event('auth:unauthorized'));
             }
-            const error = new Error(data.message || `Server error (${response.status})`);
+            const errorMsg = data.message || data.error || (response.status === 503 
+                ? 'Database service is connecting. Please retry in a few moments.' 
+                : response.status === 500 
+                    ? 'Server error occurred while processing request. Please retry.' 
+                    : `Server error (${response.status})`);
+            const error = new Error(errorMsg);
             error.status = response.status;
             error.data = data;
             throw error;
@@ -63,6 +68,11 @@ const request = async (endpoint, options = {}) => {
 
         return data;
     } catch (err) {
+        if (!err.status && (err.message === 'Failed to fetch' || err.message?.includes('NetworkError') || err.message?.includes('Load failed'))) {
+            const netErr = new Error('Unable to connect to Nivaran backend server on port 5000. Please ensure the backend server is running.');
+            netErr.status = 0;
+            throw netErr;
+        }
         console.error(`API Error on ${endpoint}:`, err);
         throw err;
     }

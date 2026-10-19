@@ -60,7 +60,16 @@ exports.login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user._id, role: user.role, ward: user.ward, district: user.district, taluk: user.taluk, panchayat: user.panchayat },
+            { 
+                id: user._id, 
+                name: user.name,
+                email: user.email,
+                role: user.role, 
+                ward: user.ward, 
+                district: user.district, 
+                taluk: user.taluk, 
+                panchayat: user.panchayat 
+            },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );

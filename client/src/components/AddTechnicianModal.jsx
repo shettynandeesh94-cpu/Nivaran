@@ -37,17 +37,21 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!name.trim()) {
+        const cleanName = name.trim();
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanPhone = phone.trim();
+
+        if (!cleanName) {
             showToast('Please enter the technician full name.', 'warning');
             return;
         }
 
-        if (!email.trim() || !email.includes('@')) {
-            showToast('Please enter a valid official email address.', 'warning');
+        if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+            showToast('Please enter a valid official email address (e.g. name@domain.com).', 'warning');
             return;
         }
 
-        if (!phone.trim()) {
+        if (!cleanPhone) {
             showToast('Please enter the technician contact phone number.', 'warning');
             return;
         }
@@ -55,9 +59,9 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
         try {
             setSubmitting(true);
             const res = await api.addTechnician({
-                name: name.trim(),
-                email: email.trim().toLowerCase(),
-                phone: phone.trim(),
+                name: cleanName,
+                email: cleanEmail,
+                phone: cleanPhone,
                 specialization,
                 ward: ward.trim() || user?.panchayat || user?.ward || 'General Ward',
                 district: district.trim() || user?.district || '',
@@ -80,7 +84,8 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
                 onClose();
             }
         } catch (err) {
-            showToast(err.message || 'Failed to add technician.', 'error');
+            const errorMsg = err.data?.message || err.data?.error || err.message || 'Failed to add technician.';
+            showToast(errorMsg, 'error');
         } finally {
             setSubmitting(false);
         }

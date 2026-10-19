@@ -77,7 +77,9 @@ const CATEGORY_SPECIALIZATION_MAP = {
 async function ensureTechniciansSeeded() {
     try {
         for (const tech of DEFAULT_TECHNICIANS) {
-            const exists = await User.findOne({ email: tech.email });
+            const exists = await User.findOne({ 
+                email: { $regex: new RegExp(`^${tech.email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } 
+            });
             if (!exists) {
                 const hashedPassword = await bcrypt.hash(tech.password, 10);
                 await User.create({

@@ -1,3 +1,7 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
@@ -15,6 +19,21 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Ensure database connection is ready before processing API requests
+app.use('/api', (req, res, next) => {
+    // Allow health check to pass even if DB is reconnecting
+    if (req.path === '/health') {
+        return next();
+    }
+    if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+            message: 'Database service is connecting. Please retry in a few moments.',
+            status: 'database_unavailable'
+        });
+    }
+    next();
+});
 
 const fs = require('fs');
 
@@ -61,6 +80,16 @@ app.get(/.*/, (req, res, next) => {
 });
 
 async function startServer() {
+    mongoose.connection.on('error', (err) => {
+        console.error('MongoDB Atlas connection warning:', err.message);
+    });
+    mongoose.connection.on('disconnected', () => {
+        console.warn('MongoDB Atlas connection lost. Attempting reconnection...');
+    });
+    mongoose.connection.on('reconnected', () => {
+        console.log('MongoDB Atlas reconnected successfully.');
+    });
+
     try {
         console.log('Connecting to MongoDB Atlas...');
         await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 });
