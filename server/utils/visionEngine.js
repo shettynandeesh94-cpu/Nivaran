@@ -1,10 +1,11 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const { GoogleGenAI } = require('@google/genai');
 
 const PRIMARY_MODELS = [
     'gemini-3.5-flash-lite',
-    'gemini-3.5-flash',
-    'gemini-3.8-flash',
-    'gemini-3.7-flash'
+    'gemini-flash-lite-latest',
+    'gemini-3.5-flash'
 ];
 
 // Helper: Call promise with timeout
@@ -278,7 +279,7 @@ Respond ONLY with valid JSON.
 
     for (const modelName of PRIMARY_MODELS) {
         try {
-            const response = await ai.models.generateContent({
+            const generatePromise = ai.models.generateContent({
                 model: modelName,
                 contents: [
                     {
@@ -292,6 +293,8 @@ Respond ONLY with valid JSON.
                 ],
                 config: { responseMimeType: 'application/json' }
             });
+
+            const response = await withTimeout(generatePromise, 8000);
 
             const text = response.text ? response.text.trim() : '';
             const cleanedText = text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
