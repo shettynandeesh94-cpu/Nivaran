@@ -43,15 +43,28 @@ const request = async (endpoint, options = {}) => {
         const response = await fetch(url, config);
         const text = await response.text();
         let data;
+        const isHtmlResponse = text && (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html') || text.trim().startsWith('<!doctype'));
+
+        if (isHtmlResponse) {
+            const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            const htmlErrMsg = isLocal
+                ? 'Backend server is unreachable or offline. Please ensure the backend server is running on port 5000.'
+                : 'Backend API is unreachable. Please ensure your backend is deployed and VITE_API_URL is configured in your hosting environment.';
+            const error = new Error(htmlErrMsg);
+            error.status = 502;
+            throw error;
+        }
+
         try {
             data = text ? JSON.parse(text) : {};
         } catch (e) {
+            const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
             data = { 
                 message: response.ok 
                     ? text 
                     : (response.status === 502 || response.status === 504 
-                        ? 'Backend server is unreachable or offline. Please ensure the backend server is running on port 5000.' 
-                        : 'Backend server connection error. Please ensure the server is running on port 5000.') 
+                        ? (isLocal ? 'Backend server is unreachable or offline. Please ensure the backend server is running on port 5000.' : 'Backend server is unreachable. Please ensure the backend is deployed and running.')
+                        : (isLocal ? 'Backend server connection error. Please ensure the server is running on port 5000.' : 'Backend server connection error. Please ensure the backend service is reachable.'))
             };
         }
 
@@ -81,7 +94,12 @@ const request = async (endpoint, options = {}) => {
         return data;
     } catch (err) {
         if (!err.status && (err.message === 'Failed to fetch' || err.message?.includes('NetworkError') || err.message?.includes('Load failed'))) {
-            const netErr = new Error('Unable to connect to Nivaran backend server on port 5000. Please ensure the backend server is running.');
+            const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            const netErr = new Error(
+                isLocal 
+                    ? 'Unable to connect to Nivaran backend server on port 5000. Please ensure the backend server is running.'
+                    : 'Unable to connect to Nivaran backend API. Please ensure your backend server is deployed and active.'
+            );
             netErr.status = 0;
             throw netErr;
         }
