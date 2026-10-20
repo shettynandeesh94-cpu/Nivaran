@@ -131,6 +131,39 @@ export const SignupModal = ({ isOpen, onClose, onGotoLogin, showToast }) => {
                     <h3>Join Nivaran</h3>
                     <p>Panchayati Raj & Civic Grievance Redressal Portal</p>
                 </div>
+
+                <div style={{
+                    marginBottom: '16px',
+                    padding: '10px 14px',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.82rem'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c7d2fe' }}>
+                        <i className="fa-brands fa-google" style={{ color: '#818cf8', fontSize: '1rem' }}></i>
+                        <span>Prefer 1-click Google or Gmail OTP?</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onGotoLogin}
+                        style={{
+                            background: 'rgba(99, 102, 241, 0.25)',
+                            border: '1px solid rgba(99, 102, 241, 0.4)',
+                            color: '#ffffff',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontWeight: 600
+                        }}
+                    >
+                        Sign In Now
+                    </button>
+                </div>
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label htmlFor="signup-name">Full Name</label>

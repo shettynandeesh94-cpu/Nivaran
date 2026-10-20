@@ -121,6 +121,37 @@ export const api = {
         return data;
     },
 
+    googleLogin: async (credential) => {
+        const data = await request('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential }),
+        });
+        if (data.token) {
+            setToken(data.token);
+            setUser(data.user);
+        }
+        return data;
+    },
+
+    sendOtp: async (email) => {
+        return await request('/auth/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        });
+    },
+
+    verifyOtp: async (email, otp) => {
+        const data = await request('/auth/verify-otp', {
+            method: 'POST',
+            body: JSON.stringify({ email, otp }),
+        });
+        if (data.token) {
+            setToken(data.token);
+            setUser(data.user);
+        }
+        return data;
+    },
+
     signup: async (nameOrData, email, password, role, ward, district, taluk, panchayat) => {
         let body;
         if (typeof nameOrData === 'object' && nameOrData !== null) {

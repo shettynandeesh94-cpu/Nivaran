@@ -12,6 +12,9 @@ const userSchema = new mongoose.Schema({
     specialization: { type: String }, // e.g. 'Streetlights', 'Roads', 'Water Supply', 'Sanitation', 'Health'
     phone: { type: String },
     isAvailable: { type: Boolean, default: true },
+    googleId: { type: String },
+    avatar: { type: String },
+    authProvider: { type: String, default: 'local' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
