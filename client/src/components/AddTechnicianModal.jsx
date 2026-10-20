@@ -22,13 +22,17 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
     const [password, setPassword] = useState('password123');
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [formError, setFormError] = useState('');
 
     useEffect(() => {
-        if (isOpen && user) {
-            setWard(user.panchayat || user.ward || '');
-            setDistrict(user.district || '');
-            setTaluk(user.taluk || '');
-            setPanchayat(user.panchayat || '');
+        if (isOpen) {
+            setFormError('');
+            if (user) {
+                setWard(user.panchayat || user.ward || '');
+                setDistrict(user.district || '');
+                setTaluk(user.taluk || '');
+                setPanchayat(user.panchayat || '');
+            }
         }
     }, [isOpen, user]);
 
@@ -36,23 +40,30 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setFormError('');
 
         const cleanName = name.trim();
         const cleanEmail = email.trim().toLowerCase();
         const cleanPhone = phone.trim();
 
         if (!cleanName) {
-            showToast('Please enter the technician full name.', 'warning');
+            const msg = 'Please enter the technician full name.';
+            setFormError(msg);
+            showToast(msg, 'warning');
             return;
         }
 
         if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-            showToast('Please enter a valid official email address (e.g. name@domain.com).', 'warning');
+            const msg = 'Please enter a valid email address (e.g. name@gmail.com).';
+            setFormError(msg);
+            showToast(msg, 'warning');
             return;
         }
 
         if (!cleanPhone) {
-            showToast('Please enter the technician contact phone number.', 'warning');
+            const msg = 'Please enter the technician contact phone number.';
+            setFormError(msg);
+            showToast(msg, 'warning');
             return;
         }
 
@@ -81,10 +92,12 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
                 setPhone('');
                 setSpecialization('Roads');
                 setPassword('password123');
+                setFormError('');
                 onClose();
             }
         } catch (err) {
             const errorMsg = err.data?.message || err.data?.error || err.message || 'Failed to add technician.';
+            setFormError(errorMsg);
             showToast(errorMsg, 'error');
         } finally {
             setSubmitting(false);
@@ -105,6 +118,24 @@ export const AddTechnicianModal = ({ isOpen, onClose, onTechnicianAdded, showToa
                     <h3>Onboard Field Technician</h3>
                     <p>Register on-duty municipal worker for autonomous task dispatching.</p>
                 </div>
+
+                {formError && (
+                    <div style={{
+                        margin: '0 0 16px 0',
+                        padding: '12px 16px',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        borderRadius: '8px',
+                        color: '#fca5a5',
+                        fontSize: '0.875rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    }}>
+                        <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444', fontSize: '1.1rem' }}></i>
+                        <div style={{ flex: 1 }}>{formError}</div>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>

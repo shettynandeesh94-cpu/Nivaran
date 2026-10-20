@@ -71,7 +71,7 @@ exports.login = async (req, res) => {
                 panchayat: user.panchayat 
             },
             process.env.JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '30d' }
         );
 
         res.json({

@@ -46,7 +46,13 @@ const request = async (endpoint, options = {}) => {
         try {
             data = text ? JSON.parse(text) : {};
         } catch (e) {
-            data = { message: response.ok ? text : (response.status === 502 || response.status === 504 ? 'Server is starting up or unavailable. Please try again in a moment.' : 'Unexpected server response.') };
+            data = { 
+                message: response.ok 
+                    ? text 
+                    : (response.status === 502 || response.status === 504 
+                        ? 'Backend server is unreachable or offline. Please ensure the backend server is running on port 5000.' 
+                        : 'Backend server connection error. Please ensure the server is running on port 5000.') 
+            };
         }
 
         if (!response.ok) {
@@ -55,11 +61,17 @@ const request = async (endpoint, options = {}) => {
                 clearUser();
                 window.dispatchEvent(new Event('auth:unauthorized'));
             }
-            const errorMsg = data.message || data.error || (response.status === 503 
-                ? 'Database service is connecting. Please retry in a few moments.' 
-                : response.status === 500 
-                    ? 'Server error occurred while processing request. Please retry.' 
-                    : `Server error (${response.status})`);
+            const fallbackMsg = response.status === 401
+                ? 'Your login session has expired or is unauthorized. Please sign in again as Corporator or Admin.'
+                : response.status === 403
+                    ? 'Access denied: Only Corporators or Administrators are authorized to perform this operation.'
+                    : response.status === 503
+                        ? 'Database service is connecting. Please retry in a few moments.'
+                        : response.status === 500
+                            ? 'Server error occurred while processing request. Please retry.'
+                            : `Server error (${response.status})`;
+
+            const errorMsg = data.message || data.error || fallbackMsg;
             const error = new Error(errorMsg);
             error.status = response.status;
             error.data = data;

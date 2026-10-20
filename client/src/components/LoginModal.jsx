@@ -67,6 +67,29 @@ export const LoginModal = ({ isOpen, onClose, onGotoSignup, showToast }) => {
                     <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
                         {submitting ? 'Signing In...' : 'Sign In'}
                     </button>
+                    <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '14px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>
+                            Quick Demo Fill:
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.75rem', padding: '6px 8px' }}
+                                onClick={() => { setEmail('gunda@gmail.com'); setPassword('123456'); }}
+                            >
+                                🏛️ PDO (Corporator)
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.75rem', padding: '6px 8px' }}
+                                onClick={() => { setEmail('shettynandeesh94@gmail.com'); setPassword('123456'); }}
+                            >
+                                🛡️ Admin (Nandeesh)
+                            </button>
+                        </div>
+                    </div>
                     <div className="modal-footer">
                         Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); onGotoSignup(); }}>Register here</a>
                     </div>

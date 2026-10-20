@@ -150,9 +150,17 @@ exports.addTechnician = async (req, res) => {
 exports.deleteTechnician = async (req, res) => {
     try {
         const { id } = req.params;
-        const tech = await User.findOne({ _id: id, role: 'technician' });
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid technician ID.' });
+        }
+
+        let tech = await User.findOne({ _id: id, role: 'technician' });
         if (!tech) {
-            return res.status(404).json({ message: 'Field technician not found.' });
+            tech = await User.findById(id);
+        }
+        if (!tech) {
+            return res.status(404).json({ message: 'Field technician not found or already removed.' });
         }
 
         // Reassign or unassign pending complaints

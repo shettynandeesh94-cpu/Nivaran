@@ -72,6 +72,8 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
     const [isAddTechModalOpen, setIsAddTechModalOpen] = useState(false);
     const [techSearch, setTechSearch] = useState('');
     const [techFilterSpec, setTechFilterSpec] = useState('');
+    const [technicianToDelete, setTechnicianToDelete] = useState(null);
+    const [deletingTech, setDeletingTech] = useState(false);
 
     // File complaint states
     const [title, setTitle] = useState('');
@@ -389,16 +391,22 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
         }
     }, [activeTab, refreshKey, user]);
 
-    const handleDeleteTechnician = async (techId, techName) => {
-        if (!window.confirm(`Are you sure you want to remove technician ${techName}? Any open tickets assigned to them will be unassigned.`)) {
-            return;
-        }
+    const confirmDeleteTechnician = async () => {
+        if (!technicianToDelete) return;
+        const { id, name } = technicianToDelete;
         try {
-            await api.deleteTechnician(techId);
-            showToast(`Technician ${techName} removed from roster.`, 'info');
+            setDeletingTech(true);
+            await api.deleteTechnician(id);
+            // Optimistic update: immediately remove from roster list
+            setTechnicians(prev => prev.filter(t => t._id !== id));
+            showToast(`Technician ${name} removed from roster.`, 'info');
+            setTechnicianToDelete(null);
             loadTechniciansData();
         } catch (err) {
             showToast(err.message || 'Failed to remove technician', 'error');
+            loadTechniciansData();
+        } finally {
+            setDeletingTech(false);
         }
     };
 
@@ -1615,9 +1623,10 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                     ) : <span></span>}
 
                                                     <button 
+                                                        type="button"
                                                         className="btn btn-outline btn-sm" 
                                                         style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-                                                        onClick={() => handleDeleteTechnician(tech._id, tech.name)}
+                                                        onClick={() => setTechnicianToDelete({ id: tech._id, name: tech.name })}
                                                         title="Remove from roster"
                                                     >
                                                         <i className="fa-solid fa-trash"></i> Remove
@@ -1644,6 +1653,63 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                 showToast={showToast}
                 user={user}
             />
+
+            {/* Custom In-App Confirm Delete Technician Modal */}
+            {technicianToDelete && (
+                <div className="modal-backdrop" onClick={() => !deletingTech && setTechnicianToDelete(null)}>
+                    <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+                        <div className="modal-header" style={{ textAlign: 'center' }}>
+                            <div className="modal-logo-icon" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', margin: '0 auto 12px' }}>
+                                <i className="fa-solid fa-trash-can"></i>
+                            </div>
+                            <h3>Remove Technician</h3>
+                            <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
+                                Are you sure you want to remove <strong>{technicianToDelete.name}</strong> from the municipal field roster?
+                            </p>
+                            <div style={{
+                                fontSize: '0.8rem',
+                                color: '#f87171',
+                                background: 'rgba(239, 68, 68, 0.08)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                borderRadius: '8px',
+                                padding: '10px 14px',
+                                marginTop: '14px',
+                                textAlign: 'left'
+                            }}>
+                                <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '6px' }}></i>
+                                Any pending complaints assigned to this technician will be unassigned automatically.
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                            <button 
+                                type="button" 
+                                className="btn btn-secondary" 
+                                onClick={() => setTechnicianToDelete(null)}
+                                disabled={deletingTech}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="button" 
+                                className="btn btn-danger" 
+                                style={{ background: '#ef4444', borderColor: '#ef4444', color: '#fff', minWidth: '130px' }}
+                                onClick={confirmDeleteTechnician}
+                                disabled={deletingTech}
+                            >
+                                {deletingTech ? (
+                                    <>
+                                        <i className="fa-solid fa-spinner fa-spin"></i> Removing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fa-solid fa-trash"></i> Yes, Remove
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Fixed Mobile Bottom App Navigation Bar */}
             <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
