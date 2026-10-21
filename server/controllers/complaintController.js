@@ -229,10 +229,16 @@ exports.getComplaints = async (req, res) => {
 
         let complaints;
         if (req.user.role === 'citizen') {
-            complaints = await Complaint.find({ createdBy: req.user.id })
+            complaints = await Complaint.find({
+                $or: [
+                    { createdBy: req.user.id },
+                    { 'additionalEvidence.reportedBy': req.user.id }
+                ]
+            })
                 .populate('department')
                 .populate('assignedTo', 'name email role specialization phone')
                 .populate('createdBy', 'name email role')
+                .populate('additionalEvidence.reportedBy', 'name email role')
                 .sort({ createdAt: -1 });
         } else if (req.user.role === 'technician') {
             complaints = await Complaint.find({
@@ -244,12 +250,14 @@ exports.getComplaints = async (req, res) => {
                 .populate('department')
                 .populate('assignedTo', 'name email role specialization phone')
                 .populate('createdBy', 'name email role')
+                .populate('additionalEvidence.reportedBy', 'name email role')
                 .sort({ createdAt: -1 });
         } else {
             complaints = await Complaint.find()
                 .populate('department')
                 .populate('assignedTo', 'name email role specialization phone')
                 .populate('createdBy', 'name email role')
+                .populate('additionalEvidence.reportedBy', 'name email role')
                 .sort({ createdAt: -1 });
         }
         res.json(complaints);
@@ -273,7 +281,8 @@ exports.getComplaintById = async (req, res) => {
         const populated = await Complaint.findById(req.params.id)
             .populate('department')
             .populate('assignedTo', 'name email role specialization phone')
-            .populate('createdBy', 'name email role');
+            .populate('createdBy', 'name email role')
+            .populate('additionalEvidence.reportedBy', 'name email role');
 
         res.json(populated);
     } catch (err) {

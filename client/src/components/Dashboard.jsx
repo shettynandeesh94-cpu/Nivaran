@@ -462,8 +462,8 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             };
             const data = await api.createComplaint(payload);
             
-            if (data.message && data.message.includes('Similar open complaint already exists')) {
-                showToast(data.message, 'info');
+            if (data.isMerged || (data.message && (data.message.includes('Similar') || data.message.includes('exact spot') || data.message.includes('citizens reported')))) {
+                showToast(data.message || 'Similar issue detected — added your photo evidence and boosted priority!', 'info');
             } else {
                 showToast('Complaint submitted successfully with AI Vision validation!', 'success');
             }
@@ -705,6 +705,18 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                         <td className="complaint-title-cell">
                                                             <div>{c.title}</div>
                                                             <div className="complaint-desc-cell">{c.description}</div>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                                                {c.reportCount > 1 && (
+                                                                    <span style={{ fontSize: '0.68rem', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <i className="fa-solid fa-users"></i> {c.reportCount} Citizens Reported
+                                                                    </span>
+                                                                )}
+                                                                {c.additionalEvidence && c.additionalEvidence.some(ev => String(ev.reportedBy?._id || ev.reportedBy) === String(user?._id || user?.id)) && (
+                                                                    <span style={{ fontSize: '0.68rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <i className="fa-solid fa-camera"></i> Your Evidence Attached
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             {(() => {
                                                                 const tech = getAssignedTechnician(c);
                                                                 return tech ? (
@@ -1152,6 +1164,18 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
                                                         <td className="complaint-title-cell">
                                                             <div>{c.title}</div>
                                                             <div className="complaint-desc-cell">{c.description}</div>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                                                {c.reportCount > 1 && (
+                                                                    <span style={{ fontSize: '0.68rem', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <i className="fa-solid fa-users"></i> {c.reportCount} Citizens Reported
+                                                                    </span>
+                                                                )}
+                                                                {c.additionalEvidence && c.additionalEvidence.some(ev => String(ev.reportedBy?._id || ev.reportedBy) === String(user?._id || user?.id)) && (
+                                                                    <span style={{ fontSize: '0.68rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <i className="fa-solid fa-camera"></i> Your Evidence Attached
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             {(() => {
                                                                 const tech = getAssignedTechnician(c);
                                                                 return tech ? (
