@@ -221,8 +221,10 @@ exports.getComplaints = async (req, res) => {
             ]
         });
         for (const c of unassigned) {
-            await autoDispatchComplaint(c);
-            await c.save();
+            const assignedTech = await autoDispatchComplaint(c);
+            if (assignedTech) {
+                await c.save();
+            }
         }
 
         let complaints;

@@ -1647,7 +1647,10 @@ export const Dashboard = ({ activeTab, switchTab, onOpenDetails, showToast, refr
             <AddTechnicianModal
                 isOpen={isAddTechModalOpen}
                 onClose={() => setIsAddTechModalOpen(false)}
-                onTechnicianAdded={() => {
+                onTechnicianAdded={(newTech) => {
+                    if (newTech) {
+                        setTechnicians(prev => [newTech, ...prev.filter(t => t._id !== newTech._id)]);
+                    }
                     loadTechniciansData();
                 }}
                 showToast={showToast}

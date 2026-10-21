@@ -71,11 +71,32 @@ const CATEGORY_SPECIALIZATION_MAP = {
     'General': 'Roads'
 };
 
+const Setting = require('../models/Setting');
+
 /**
  * Ensures baseline technicians exist in the database for auto-dispatching.
+ * Runs once on initial deployment only. Never resurrects technicians deleted by an admin or corporator.
  */
 async function ensureTechniciansSeeded() {
     try {
+        // 1. If technician seeding was already performed and recorded, do not seed again
+        const alreadySeeded = await Setting.findOne({ key: 'technicians_initial_seed_done' });
+        if (alreadySeeded) {
+            return;
+        }
+
+        // 2. If technicians already exist in the database, mark seeding as completed to prevent overriding removals
+        const existingTechsCount = await User.countDocuments({ role: 'technician' });
+        if (existingTechsCount > 0) {
+            await Setting.findOneAndUpdate(
+                { key: 'technicians_initial_seed_done' },
+                { key: 'technicians_initial_seed_done', value: true },
+                { upsert: true, returnDocument: 'after' }
+            );
+            return;
+        }
+
+        // 3. For an empty database on fresh installation, seed the initial roster once
         for (const tech of DEFAULT_TECHNICIANS) {
             const exists = await User.findOne({ 
                 email: { $regex: new RegExp(`^${tech.email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } 
@@ -86,14 +107,16 @@ async function ensureTechniciansSeeded() {
                     ...tech,
                     password: hashedPassword,
                 });
-                console.log(`[DispatchEngine] 👷 Seeded Field Technician: ${tech.name} (${tech.specialization})`);
-            } else if (!exists.specialization || !exists.phone) {
-                exists.specialization = tech.specialization;
-                exists.phone = tech.phone;
-                exists.role = 'technician';
-                await exists.save();
+                console.log(`[DispatchEngine] 👷 Seeded Initial Field Technician: ${tech.name} (${tech.specialization})`);
             }
         }
+
+        await Setting.findOneAndUpdate(
+            { key: 'technicians_initial_seed_done' },
+            { key: 'technicians_initial_seed_done', value: true },
+            { upsert: true, returnDocument: 'after' }
+        );
+        console.log('[DispatchEngine] ✅ Initial baseline technicians roster seeded and locked.');
     } catch (err) {
         console.warn('[DispatchEngine] Technician seed warning:', err.message);
     }
@@ -101,36 +124,47 @@ async function ensureTechniciansSeeded() {
 
 /**
  * Autonomous Zero-Touch Dispatch Engine
- * Automatically matches a new grievance with the on-duty field technician based on category and ward.
+ * Automatically matches a new grievance with an on-duty field technician based on category and ward.
+ * Dispatches only to active, existing technicians in the database without re-seeding deleted ones.
  */
 async function autoDispatchComplaint(complaint) {
     try {
-        await ensureTechniciansSeeded();
-
         const cat = complaint.category || 'General';
-        const specialization = CATEGORY_SPECIALIZATION_MAP[cat] || 'Roads';
+        const specialization = CATEGORY_SPECIALIZATION_MAP[cat] || cat || 'General';
+        const specRegex = new RegExp(specialization.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
 
         // 1. Try finding a technician matching exact ward + specialization
-        let technician = await User.findOne({
-            role: 'technician',
-            specialization: specialization,
-            ward: complaint.ward
-        });
-
-        // 2. Fallback to any technician with matching specialization
-        if (!technician) {
+        let technician = null;
+        if (complaint.ward) {
             technician = await User.findOne({
                 role: 'technician',
-                specialization: specialization
+                specialization: { $regex: specRegex },
+                ward: complaint.ward
             });
         }
 
-        // 3. Fallback to any available technician
+        // 2. Fallback to any technician matching ward
+        if (!technician && complaint.ward) {
+            technician = await User.findOne({
+                role: 'technician',
+                ward: complaint.ward
+            });
+        }
+
+        // 3. Fallback to any technician with matching specialization
+        if (!technician) {
+            technician = await User.findOne({
+                role: 'technician',
+                specialization: { $regex: specRegex }
+            });
+        }
+
+        // 4. Fallback to any available active technician in the system
         if (!technician) {
             technician = await User.findOne({ role: 'technician' });
         }
 
-        // 4. Ultimate fallback to corporator or admin
+        // 5. Ultimate fallback to corporator or admin if no field technicians exist
         if (!technician) {
             technician = await User.findOne({ role: { $in: ['corporator', 'admin'] } });
         }

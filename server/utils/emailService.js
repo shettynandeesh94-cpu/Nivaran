@@ -4,7 +4,8 @@ let transporter = null;
 
 function getTransporter() {
     const user = process.env.EMAIL_USER || process.env.GMAIL_USER;
-    const pass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD;
+    const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD;
+    const pass = rawPass ? String(rawPass).replace(/\s+/g, '') : '';
 
     if (!user || !pass) {
         return null;
@@ -16,6 +17,9 @@ function getTransporter() {
             auth: {
                 user,
                 pass
+            },
+            tls: {
+                rejectUnauthorized: false
             }
         });
     }

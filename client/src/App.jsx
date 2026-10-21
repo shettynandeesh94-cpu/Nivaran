@@ -13,7 +13,20 @@ const MainApp = () => {
   
   // Views and Tabs
   const [view, setView] = useState('landing'); // 'landing' or 'dashboard'
-  const [activeTab, setActiveTab] = useState('tab-overview');
+  const [activeTab, setActiveTabState] = useState(() => {
+    try {
+      return sessionStorage.getItem('nivaran_active_tab') || 'tab-overview';
+    } catch (e) {
+      return 'tab-overview';
+    }
+  });
+
+  const setActiveTab = React.useCallback((tab) => {
+    setActiveTabState(tab);
+    try {
+      sessionStorage.setItem('nivaran_active_tab', tab);
+    } catch (e) {}
+  }, []);
   
   // Modals state
   const [loginOpen, setLoginOpen] = useState(false);
